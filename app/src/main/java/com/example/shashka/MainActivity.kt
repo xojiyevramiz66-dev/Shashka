@@ -122,20 +122,20 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Игровая доска
+        // Игровая доска с тонкими, изящными краями
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .shadow(20.dp, RoundedCornerShape(12.dp))
+                .shadow(20.dp, RoundedCornerShape(14.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(Color(0xFF4E3621), Color(0xFF2B1A0E))
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 )
-                .border(12.dp, Color(0xFF3B2414), RoundedCornerShape(12.dp))
-                .padding(2.dp)
+                .border(5.dp, Color(0xFF3B2414), RoundedCornerShape(14.dp)) // Сделали рамку тоньше (было 12dp)
+                .padding(3.dp) // Небольшой внутренний отступ для идеальной видимости шашек по краям
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
@@ -227,7 +227,7 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
 
     Canvas(
         modifier = Modifier
-            .fillMaxSize(0.76f) // Сбалансированный размер, чтобы края фишек отчетливо выделялись внутри клеток
+            .fillMaxSize(0.80f)
     ) {
         val radius = size.minDimension / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
@@ -260,9 +260,9 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
             center = center
         )
 
-        // ЯРКИЙ КОНТУР КРАЕВ: Светло-серебристый для черных шашек, чтобы они четко сияли на темных клетках!
+        // Контур шашки
         drawCircle(
-            color = if (isWhite) Color(0xFFB59A74) else Color(0xFFAAAAAA),
+            color = if (isWhite) Color(0xFFB59A74) else Color(0xFFB0BEC5),
             radius = radius * 0.94f,
             center = center,
             style = Stroke(width = radius * 0.08f)
