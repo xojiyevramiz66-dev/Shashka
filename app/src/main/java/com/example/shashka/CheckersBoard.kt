@@ -24,8 +24,8 @@ val PieceBlackColor = Color(0xFF212121)
 @Composable
 fun CheckersBoard(
     boardState: Array<Array<Cell>>,
-    selectedPosition: BoardPosition?,
-    onCellClick: (BoardPosition) -> Unit,
+    selectedPosition: Position?,
+    onCellClick: (Position) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Делаем доску квадратной
@@ -43,13 +43,13 @@ fun CheckersBoard(
                 for (col in 0..7) {
                     val isDarkCell = (row + col) % 2 != 0
                     val cell = boardState[row][col]
-                    val isSelected = selectedPosition == BoardPosition(row, col)
+                    val isSelected = selectedPosition == Position(row, col)
 
                     CellView(
                         cell = cell,
                         isDark = isDarkCell,
                         isSelected = isSelected,
-                        onClick = { onCellClick(BoardPosition(row, col)) },
+                        onClick = { onCellClick(Position(row, col)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
