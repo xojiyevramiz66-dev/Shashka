@@ -47,9 +47,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     val board = viewModel.boardState
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
-    
-    // Получаем актуальный список доступных ходов из ViewModel
-    val validMoves = viewModel.validMoves
 
     Column(
         modifier = Modifier
@@ -149,9 +146,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         for (col in 0..7) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
-                            
-                            // Проверяем, содержится ли текущая клетка в списке доступных ходов
-                            val isAvailableMove = validMoves.any { it.row == row && it.col == col }
 
                             val isDarkCell = (row + col) % 2 != 0
                             val cellBackground = when {
@@ -168,17 +162,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                     .clickable { viewModel.onCellClicked(cell.position) },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Подсветка доступного хода (неоново-зеленый маркер)
-                                if (isAvailableMove && cell.piece == null) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .shadow(4.dp, CircleShape)
-                                            .background(Color(0xFF4CAF50), CircleShape)
-                                            .border(2.dp, Color(0xFF81C784), CircleShape)
-                                    )
-                                }
-
                                 cell.piece?.let { piece ->
                                     AnimatedPieceWrapper(piece = piece)
                                 }
