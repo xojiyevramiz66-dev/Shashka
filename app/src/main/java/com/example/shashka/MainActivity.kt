@@ -47,6 +47,9 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     val board = viewModel.boardState
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
+    
+    // Получаем актуальный список доступных ходов из ViewModel
+    val validMoves = viewModel.validMoves
 
     Column(
         modifier = Modifier
@@ -147,8 +150,8 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
-                            // Безопасная проверка подсветки хода по текущей позиции cell.position
-                            val isAvailableMove = selected != null && viewModel.isValidMove(selected, cell.position)
+                            // Проверяем, содержится ли текущая клетка в списке доступных ходов
+                            val isAvailableMove = validMoves.any { it.row == row && it.col == col }
 
                             val isDarkCell = (row + col) % 2 != 0
                             val cellBackground = when {
