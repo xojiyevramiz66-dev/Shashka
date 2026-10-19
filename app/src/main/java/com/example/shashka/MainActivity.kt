@@ -48,7 +48,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Вспомогательная функция для генерации тактильной отдачи (вибрации)
 fun triggerVibration(context: Context, enabled: Boolean) {
     if (!enabled) return
     try {
@@ -65,9 +64,7 @@ fun triggerVibration(context: Context, enabled: Boolean) {
                 vibrator.vibrate(30L)
             }
         }
-    } catch (e: Exception) {
-        // Игнорируем, если на устройстве нет разрешения или мотора вибрации
-    }
+    } catch (e: Exception) {}
 }
 
 @Composable
@@ -77,33 +74,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
 
-    // Состояние видимости диалогового окна настроек
     var showSettingsDialog by remember { mutableStateOf(false) }
 
-    // Действующие состояния настроек игры
-    var selectedDifficulty by remember { mutableStateOf("Средний") }
-    var selectedPieceColor by remember { mutableStateOf("Белые") }
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
-
-    // Вспомогательная функция применения настроек к ViewModel
-    fun applySettingsToViewModel(difficulty: String, color: String) {
-        try {
-            // Передача уровня сложности в ViewModel через рефлексию
-            val diffMethod = viewModel::class.java.methods.firstOrNull { 
-                it.name.contains("Difficulty", ignoreCase = true) || it.name.contains("Level", ignoreCase = true) 
-            }
-            diffMethod?.invoke(viewModel, difficulty)
-
-            // Передача выбора цвета фишек и перезапуск партии
-            val resetMethod = viewModel::class.java.methods.firstOrNull { 
-                it.name.contains("reset", ignoreCase = true) || it.name.contains("restart", ignoreCase = true) || it.name.contains("start", ignoreCase = true)
-            }
-            resetMethod?.invoke(viewModel)
-        } catch (e: Exception) {
-            // Игнорируем вызов, если имена методов в ViewModel отличаются
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -138,7 +112,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                 fontWeight = FontWeight.SemiBold
             )
 
-            // Кнопка шестеренки (⚙️) открывает диалоговое окно настроек
             Box(
                 modifier = Modifier
                     .size(42.dp)
@@ -155,7 +128,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             }
         }
 
-        // Профиль противника сверху
+        // Профиль противника
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -184,7 +157,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(text = "Противник", color = Color(0xFF888888), fontSize = 15.sp)
-                    Text(text = "Сложность: $selectedDifficulty", color = Color(0xFFF4C430), fontSize = 11.sp)
+                    Text(text = "Сложность: ${viewModel.aiDifficulty}", color = Color(0xFFF4C430), fontSize = 11.sp)
                 }
             }
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
@@ -240,7 +213,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             }
         }
 
-        // Профиль игрока снизу
+        // Профиль игрока
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -259,10 +232,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     Text(text = "👑", fontSize = 16.sp)
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(text = "Вы", color = Color(0xFFEEEEEE), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "Фишки: $selectedPieceColor", color = Color(0xFFAAAAAA), fontSize = 11.sp)
-                }
+                Text(text = "Вы", color = Color(0xFFEEEEEE), fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Text(text = "09:52", color = Color(0xFF666666), fontSize = 15.sp)
         }
@@ -282,10 +252,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp))
                     .clickable { 
                         triggerVibration(context, vibrationEnabled)
-                        try {
-                            val method = viewModel::class.java.getDeclaredMethod("undo")
-                            method.invoke(viewModel)
-                        } catch (e: Exception) {}
+                        viewModel.undo()
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -297,7 +264,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         }
     }
 
-    // Диалоговое окно настроек игры
+    // Диалоговое окно настроек
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -314,7 +281,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         .padding(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Выбор сложности ИИ
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(text = "Сложность ИИ", color = Color(0xFFF4C430), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Row(
@@ -324,12 +290,12 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             listOf("Лёгкий", "Средний", "Непобедимый").forEach { level ->
                                 Button(
                                     onClick = { 
-                                        selectedDifficulty = level
+                                        viewModel.aiDifficulty = level
                                         triggerVibration(context, vibrationEnabled)
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (selectedDifficulty == level) Color(0xFFF4C430) else Color(0xFF2C2C2C),
-                                        contentColor = if (selectedDifficulty == level) Color(0xFF141414) else Color(0xFFDDDDDD)
+                                        containerColor = if (viewModel.aiDifficulty == level) Color(0xFFF4C430) else Color(0xFF2C2C2C),
+                                        contentColor = if (viewModel.aiDifficulty == level) Color(0xFF141414) else Color(0xFFDDDDDD)
                                     ),
                                     modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
                                 ) {
@@ -339,32 +305,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         }
                     }
 
-                    // Выбор цвета фишек
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(text = "Цвет фишек", color = Color(0xFFF4C430), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf("Белые", "Чёрные").forEach { colorChoice ->
-                                Button(
-                                    onClick = { 
-                                        selectedPieceColor = colorChoice
-                                        triggerVibration(context, vibrationEnabled)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (selectedPieceColor == colorChoice) Color(0xFFF4C430) else Color(0xFF2C2C2C),
-                                        contentColor = if (selectedPieceColor == colorChoice) Color(0xFF141414) else Color(0xFFDDDDDD)
-                                    ),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(text = colorChoice, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-
-                    // Переключатели звука и вибрации
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -400,11 +340,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             },
             confirmButton = {
                 Button(
-                    onClick = { 
-                        triggerVibration(context, vibrationEnabled)
-                        applySettingsToViewModel(selectedDifficulty, selectedPieceColor)
-                        showSettingsDialog = false 
-                    },
+                    onClick = { showSettingsDialog = false },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4C430), contentColor = Color(0xFF141414))
                 ) {
                     Text(text = "Применить", fontWeight = FontWeight.Bold)
@@ -563,7 +499,7 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             color = if (isWhite) Color(0xFF8F734E) else Color(0xFF030303),
             radius = innerRadius,
             center = center,
-            style = Stroke(width = radius * 0.035f)
+            style = Stroke(width = radius * 0.04f)
         )
 
         // 5. Корона для дамок
