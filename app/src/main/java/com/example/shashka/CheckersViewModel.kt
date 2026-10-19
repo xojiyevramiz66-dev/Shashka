@@ -8,21 +8,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-enum class PlayerColor { WHITE, BLACK }
-enum class PieceType { PAWN, KING }
-
-data class Position(val row: Int, val col: Int)
-
-data class CheckerPiece(
-    val color: PlayerColor,
-    val type: PieceType = PieceType.PAWN
-)
-
-data class Cell(
-    val position: Position,
-    val piece: CheckerPiece? = null
-)
-
 class CheckersViewModel : ViewModel() {
 
     var aiDifficulty by mutableStateOf("Непобедимый")
@@ -68,7 +53,6 @@ class CheckersViewModel : ViewModel() {
                 executeMove(currentSelected, pos)
                 selectedPosition = null
                 
-                // Переход хода
                 currentPlayer = if (currentPlayer == PlayerColor.WHITE) PlayerColor.BLACK else PlayerColor.WHITE
 
                 if (currentPlayer == PlayerColor.BLACK) {
@@ -110,7 +94,7 @@ class CheckersViewModel : ViewModel() {
             val depth = when (aiDifficulty) {
                 "Лёгкий" -> 1
                 "Средний" -> 3
-                else -> 5 // "Непобедимый" — глубокий расчет
+                else -> 5
             }
 
             val bestMove = findBestMove(depth)
