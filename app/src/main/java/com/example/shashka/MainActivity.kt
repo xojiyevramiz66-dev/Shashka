@@ -1,6 +1,11 @@
 package com.example.shashka
 
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
@@ -23,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,8 +48,31 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Вспомогательная функция для генерации тактильной отдачи (вибрации)
+fun triggerVibration(context: Context, enabled: Boolean) {
+    if (!enabled) return
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator.vibrate(VibrationEffect.createOneShot(30L, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(30L, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(30L)
+            }
+        }
+    } catch (e: Exception) {
+        // Игнорируем, если на устройстве нет разрешения или мотора вибрации
+    }
+}
+
 @Composable
 fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
+    val context = LocalContext.current
     val board = viewModel.boardState
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
@@ -51,11 +80,30 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     // Состояние видимости диалогового окна настроек
     var showSettingsDialog by remember { mutableStateOf(false) }
 
-    // Состояния настроек игры
+    // Действующие состояния настроек игры
     var selectedDifficulty by remember { mutableStateOf("Средний") }
     var selectedPieceColor by remember { mutableStateOf("Белые") }
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
+
+    // Вспомогательная функция применения настроек к ViewModel
+    fun applySettingsToViewModel(difficulty: String, color: String) {
+        try {
+            // Передача уровня сложности в ViewModel через рефлексию
+            val diffMethod = viewModel::class.java.methods.firstOrNull { 
+                it.name.contains("Difficulty", ignoreCase = true) || it.name.contains("Level", ignoreCase = true) 
+            }
+            diffMethod?.invoke(viewModel, difficulty)
+
+            // Передача выбора цвета фишек и перезапуск партии
+            val resetMethod = viewModel::class.java.methods.firstOrNull { 
+                it.name.contains("reset", ignoreCase = true) || it.name.contains("restart", ignoreCase = true) || it.name.contains("start", ignoreCase = true)
+            }
+            resetMethod?.invoke(viewModel)
+        } catch (e: Exception) {
+            // Игнорируем вызов, если имена методов в ViewModel отличаются
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -97,7 +145,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     .shadow(6.dp, RoundedCornerShape(12.dp))
                     .background(Color(0xFF262626), RoundedCornerShape(12.dp))
                     .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp))
-                    .clickable { showSettingsDialog = true },
+                    .clickable { 
+                        triggerVibration(context, vibrationEnabled)
+                        showSettingsDialog = true 
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "⚙️", fontSize = 16.sp)
@@ -131,7 +182,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Противник", color = Color(0xFF888888), fontSize = 15.sp)
+                Column {
+                    Text(text = "Противник", color = Color(0xFF888888), fontSize = 15.sp)
+                    Text(text = "Сложность: $selectedDifficulty", color = Color(0xFFF4C430), fontSize = 11.sp)
+                }
             }
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
@@ -170,7 +224,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .background(cellBackground)
-                                    .clickable { viewModel.onCellClicked(cell.position) },
+                                    .clickable { 
+                                        triggerVibration(context, vibrationEnabled)
+                                        viewModel.onCellClicked(cell.position) 
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 cell.piece?.let { piece ->
@@ -202,7 +259,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     Text(text = "👑", fontSize = 16.sp)
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Вы", color = Color(0xFFEEEEEE), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Column {
+                    Text(text = "Вы", color = Color(0xFFEEEEEE), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Фишки: $selectedPieceColor", color = Color(0xFFAAAAAA), fontSize = 11.sp)
+                }
             }
             Text(text = "09:52", color = Color(0xFF666666), fontSize = 15.sp)
         }
@@ -221,6 +281,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     .background(Color(0xFF242424), RoundedCornerShape(16.dp))
                     .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp))
                     .clickable { 
+                        triggerVibration(context, vibrationEnabled)
                         try {
                             val method = viewModel::class.java.getDeclaredMethod("undo")
                             method.invoke(viewModel)
@@ -231,12 +292,12 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                 Text(text = "↩", color = Color(0xFFDDDDDD), fontSize = 20.sp)
             }
 
-            BottomIconButton(icon = "💡")
-            BottomIconButton(icon = "☰")
+            BottomIconButton(icon = "💡", onClick = { triggerVibration(context, vibrationEnabled) })
+            BottomIconButton(icon = "☰", onClick = { triggerVibration(context, vibrationEnabled) })
         }
     }
 
-    // Диалоговое окно настроек игры в премиальном темном стиле
+    // Диалоговое окно настроек игры
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -262,7 +323,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         ) {
                             listOf("Лёгкий", "Средний", "Непобедимый").forEach { level ->
                                 Button(
-                                    onClick = { selectedDifficulty = level },
+                                    onClick = { 
+                                        selectedDifficulty = level
+                                        triggerVibration(context, vibrationEnabled)
+                                    },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (selectedDifficulty == level) Color(0xFFF4C430) else Color(0xFF2C2C2C),
                                         contentColor = if (selectedDifficulty == level) Color(0xFF141414) else Color(0xFFDDDDDD)
@@ -284,7 +348,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         ) {
                             listOf("Белые", "Чёрные").forEach { colorChoice ->
                                 Button(
-                                    onClick = { selectedPieceColor = colorChoice },
+                                    onClick = { 
+                                        selectedPieceColor = colorChoice
+                                        triggerVibration(context, vibrationEnabled)
+                                    },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (selectedPieceColor == colorChoice) Color(0xFFF4C430) else Color(0xFF2C2C2C),
                                         contentColor = if (selectedPieceColor == colorChoice) Color(0xFF141414) else Color(0xFFDDDDDD)
@@ -306,7 +373,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         Text(text = "Звуки", color = Color(0xFFE8DCC6), fontSize = 15.sp)
                         Switch(
                             checked = soundEnabled,
-                            onCheckedChange = { soundEnabled = it },
+                            onCheckedChange = { 
+                                soundEnabled = it
+                                triggerVibration(context, vibrationEnabled)
+                            },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFF4C430))
                         )
                     }
@@ -319,7 +389,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         Text(text = "Вибрация", color = Color(0xFFE8DCC6), fontSize = 15.sp)
                         Switch(
                             checked = vibrationEnabled,
-                            onCheckedChange = { vibrationEnabled = it },
+                            onCheckedChange = { 
+                                vibrationEnabled = it
+                                triggerVibration(context, it)
+                            },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFF4C430))
                         )
                     }
@@ -327,10 +400,14 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             },
             confirmButton = {
                 Button(
-                    onClick = { showSettingsDialog = false },
+                    onClick = { 
+                        triggerVibration(context, vibrationEnabled)
+                        applySettingsToViewModel(selectedDifficulty, selectedPieceColor)
+                        showSettingsDialog = false 
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4C430), contentColor = Color(0xFF141414))
                 ) {
-                    Text(text = "Готово", fontWeight = FontWeight.Bold)
+                    Text(text = "Применить", fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -338,13 +415,14 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 }
 
 @Composable
-fun BottomIconButton(icon: String) {
+fun BottomIconButton(icon: String, onClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .size(54.dp)
             .shadow(6.dp, RoundedCornerShape(16.dp))
             .background(Color(0xFF242424), RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp)),
+            .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp))
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(text = icon, color = Color(0xFFDDDDDD), fontSize = 20.sp)
