@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF141414) // Точный цвет фона #1A1A1A / #141414
+                color = Color(0xFF141414)
             ) {
                 CheckersScreen()
             }
@@ -113,7 +113,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                 Brush.radialGradient(listOf(Color(0xFF4A4A4A), Color(0xFF111111))),
                                 CircleShape
                             )
-                            .border(1.dp, Color(0xFF666666), CircleShape)
+                            .border(1.dp, Color(0xFF888888), CircleShape)
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
@@ -122,7 +122,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Реалистичная деревянная доска под макет
+        // Игровая доска
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -227,38 +227,28 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
 
     Canvas(
         modifier = Modifier
-            .fillMaxSize(0.82f)
+            .fillMaxSize(0.76f) // Сбалансированный размер, чтобы края фишек отчетливо выделялись внутри клеток
     ) {
         val radius = size.minDimension / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
 
-        // 1. Падающая тень от шашки вниз-вправо
+        // 1. Падающая тень под шашкой
         drawCircle(
-            color = Color.Black.copy(alpha = 0.45f),
-            radius = radius * 0.98f,
-            center = center + Offset(radius * 0.08f, radius * 0.12f)
+            color = Color.Black.copy(alpha = 0.5f),
+            radius = radius * 0.96f,
+            center = center + Offset(radius * 0.06f, radius * 0.1f)
         )
 
-        // 2. Внешнее тело шашки (Объемный фасочный градиент)
+        // 2. Внешнее тело шашки
         val bodyBrush = if (isWhite) {
             Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFFFFFFFF),
-                    Color(0xFFFAF3E6),
-                    Color(0xFFE2CEB1),
-                    Color(0xFF9E8462)
-                ),
+                colors = listOf(Color(0xFFFFFFFF), Color(0xFFFAF3E6), Color(0xFFE2CEB1), Color(0xFF9E8462)),
                 center = center - Offset(radius * 0.25f, radius * 0.3f),
                 radius = radius * 1.3f
             )
         } else {
             Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFF555555),
-                    Color(0xFF2A2A2A),
-                    Color(0xFF141414),
-                    Color(0xFF000000)
-                ),
+                colors = listOf(Color(0xFF666666), Color(0xFF333333), Color(0xFF161616), Color(0xFF050505)),
                 center = center - Offset(radius * 0.25f, radius * 0.3f),
                 radius = radius * 1.3f
             )
@@ -266,34 +256,34 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
 
         drawCircle(
             brush = bodyBrush,
-            radius = radius * 0.95f,
+            radius = radius * 0.94f,
             center = center
         )
 
-        // Контур внешнего края
+        // ЯРКИЙ КОНТУР КРАЕВ: Светло-серебристый для черных шашек, чтобы они четко сияли на темных клетках!
         drawCircle(
-            color = if (isWhite) Color(0xFF8C7352) else Color(0xFF0D0D0D),
-            radius = radius * 0.95f,
+            color = if (isWhite) Color(0xFFB59A74) else Color(0xFFAAAAAA),
+            radius = radius * 0.94f,
             center = center,
-            style = Stroke(width = radius * 0.04f)
+            style = Stroke(width = radius * 0.08f)
         )
 
-        // 3. Первое концентрическое углубление (фаска)
-        val outerRingRadius = radius * 0.72f
+        // 3. Первое концентрическое кольцо (фаска)
+        val outerRingRadius = radius * 0.7f
         drawCircle(
-            color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF444444),
+            color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.9f) else Color(0xFF666666),
             radius = outerRingRadius,
             center = center,
             style = Stroke(width = radius * 0.05f)
         )
         drawCircle(
-            color = if (isWhite) Color(0xFFA68B67) else Color(0xFF111111),
+            color = if (isWhite) Color(0xFFB59A74) else Color(0xFF1E1E1E),
             radius = outerRingRadius - radius * 0.04f,
             center = center,
             style = Stroke(width = radius * 0.04f)
         )
 
-        // 4. Внутренняя чаша (углубление в центре)
+        // 4. Внутренняя чаша
         val innerBrush = if (isWhite) {
             Brush.radialGradient(
                 colors = listOf(Color(0xFFFFFFFF), Color(0xFFE4D2B8), Color(0xFFBCA17D)),
@@ -302,13 +292,13 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
             )
         } else {
             Brush.radialGradient(
-                colors = listOf(Color(0xFF3A3A3A), Color(0xFF1A1A1A), Color(0xFF080808)),
+                colors = listOf(Color(0xFF444444), Color(0xFF222222), Color(0xFF0B0B0B)),
                 center = center - Offset(radius * 0.15f, radius * 0.2f),
                 radius = radius * 0.8f
             )
         }
 
-        val innerRadius = radius * 0.52f
+        val innerRadius = radius * 0.5f
         drawCircle(
             brush = innerBrush,
             radius = innerRadius,
@@ -316,13 +306,13 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
         )
 
         drawCircle(
-            color = if (isWhite) Color(0xFF9E8360) else Color(0xFF050505),
+            color = if (isWhite) Color(0xFF9E8360) else Color(0xFF0A0A0A),
             radius = innerRadius,
             center = center,
             style = Stroke(width = radius * 0.04f)
         )
 
-        // 5. Корона для дамки или центральный блик
+        // 5. Корона или центр
         if (piece.type == PieceType.KING) {
             val crownColor = Color(0xFFF4C430)
             val crownPath = Path().apply {
@@ -343,10 +333,9 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
             drawPath(path = crownPath, color = crownColor)
             drawPath(path = crownPath, color = Color(0xFFB8860B), style = Stroke(width = 2f))
         } else {
-            // Маленькое центральное кольцо
             drawCircle(
-                color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.6f) else Color(0xFF555555),
-                radius = radius * 0.25f,
+                color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF777777),
+                radius = radius * 0.24f,
                 center = center,
                 style = Stroke(width = radius * 0.03f)
             )
