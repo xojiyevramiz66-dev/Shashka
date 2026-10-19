@@ -78,7 +78,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
-    var currentDifficulty by remember { mutableStateOf(viewModel.aiDifficulty) }
 
     Column(
         modifier = Modifier
@@ -290,15 +289,15 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             listOf("Лёгкий", "Средний", "Непобедимый").forEach { level ->
+                                val isSelected = viewModel.aiDifficulty == level
                                 Button(
                                     onClick = { 
-                                        currentDifficulty = level
                                         viewModel.aiDifficulty = level
                                         triggerVibration(context, vibrationEnabled)
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (currentDifficulty == level) Color(0xFFF4C430) else Color(0xFF2C2C2C),
-                                        contentColor = if (currentDifficulty == level) Color(0xFF141414) else Color(0xFFDDDDDD)
+                                        containerColor = if (isSelected) Color(0xFFF4C430) else Color(0xFF2C2C2C),
+                                        contentColor = if (isSelected) Color(0xFF141414) else Color(0xFFDDDDDD)
                                     ),
                                     modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
                                 ) {
