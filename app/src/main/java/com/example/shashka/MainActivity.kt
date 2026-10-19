@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF121212) // Глубокий темно-серый фон
+                color = Color(0xFF0F0F0F) // Ультра-темный премиум-фон
             ) {
                 CheckersScreen()
             }
@@ -47,30 +47,30 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Статусная панель хода
+        // Статусная строка хода
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1F1F1F)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
             modifier = Modifier
                 .padding(bottom = 24.dp)
-                .border(1.dp, Color(0xFF333333), MaterialTheme.shapes.medium)
+                .border(1.5.dp, Color(0xFF444444), MaterialTheme.shapes.medium)
         ) {
             Text(
-                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход (Белые)" else "Думает ИИ...",
-                color = if (currentPlayer == PlayerColor.WHITE) Color(0xFFA5D6A7) else Color(0xFFEF9A9A),
+                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход (Белые)" else "ИИ думает...",
+                color = if (currentPlayer == PlayerColor.WHITE) Color(0xFF81C784) else Color(0xFFE57373),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 28.dp, vertical = 14.dp)
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 14.dp)
             )
         }
 
-        // Игровая доска с качественной рамкой
+        // Премиальная игровая доска
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .shadow(16.dp, shape = MaterialTheme.shapes.medium)
-                .border(6.dp, Color(0xFF3E2723), shape = MaterialTheme.shapes.medium)
-                .background(Color(0xFFD7CCC8))
+                .shadow(24.dp, shape = MaterialTheme.shapes.medium)
+                .border(8.dp, Color(0xFF2C1E18), shape = MaterialTheme.shapes.medium) // Эффект багета из темного дерева
+                .background(Color(0xFFBCAAA4))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
@@ -79,11 +79,11 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
-                            // Определяем цвет клетки
+                            // Палитра деревянных клеток высокой четкости
                             val cellColor = when {
-                                isSelected -> Color(0xFFFFEE58) // Золотая подсветка выбранной шашки
-                                (row + col) % 2 != 0 -> Color(0xFF2E7D32) // Насыщенный благородный зеленый
-                                else -> Color(0xFFEFEBE9) // Светлая клетка дерева
+                                isSelected -> Color(0xFFFFEE58) // Золотая подсветка активной шашки
+                                (row + col) % 2 != 0 -> Color(0xFF1B5E20) // Глубокий лесной зеленый
+                                else -> Color(0xFFF5F5F5) // Светлый полированный дуб
                             }
 
                             Box(
@@ -110,54 +110,54 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 fun CheckerPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
     
-    // Роскошные радиальные градиенты для максимального объема
+    // Эффект многослойного глянцевого покрытия
     val brush = if (isWhite) {
         Brush.radialGradient(
-            colors = listOf(Color(0xFFFFFFFF), Color(0xFFCFD8DC), Color(0xFF90A4AE))
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E))
         )
     } else {
         Brush.radialGradient(
-            colors = listOf(Color(0xFF546E7A), Color(0xFF263238), Color(0xFF000000))
+            colors = listOf(Color(0xFF424242), Color(0xFF212121), Color(0xFF000000))
         )
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize(0.82f)
-            .shadow(8.dp, CircleShape)
+            .shadow(10.dp, CircleShape)
             .background(brush, shape = CircleShape)
             .border(
-                width = 2.5.dp,
-                color = if (isWhite) Color(0xFFECEFF1) else Color(0xFF111111),
+                width = 3.dp,
+                color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF272727),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
     ) {
         if (piece.type == PieceType.KING) {
-            // Корона для дамки с эффектом золота
+            // Корона с золотым сиянием для дамок
             Box(
                 modifier = Modifier
-                    .fillMaxSize(0.7f)
+                    .fillMaxSize(0.72f)
                     .background(
-                        Brush.radialGradient(listOf(Color(0xFFFFD54F), Color(0xFFFFA000))),
+                        Brush.radialGradient(listOf(Color(0xFFFFEE58), Color(0xFFFFA000))),
                         shape = CircleShape
                     )
-                    .border(1.5.dp, Color(0xFFFF8F00), CircleShape),
+                    .border(1.5.dp, Color(0xFFFF6F00), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "👑",
-                    fontSize = 20.sp
+                    fontSize = 22.sp
                 )
             }
         } else {
-            // Внутреннее тиснение для обычной шашки
+            // Внутреннее углубление (гравировка) на шашке
             Box(
                 modifier = Modifier
                     .fillMaxSize(0.55f)
                     .border(
                         width = 1.5.dp,
-                        color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF37474F),
+                        color = if (isWhite) Color(0xFF90A4AE) else Color(0xFF616161),
                         shape = CircleShape
                     )
             )
