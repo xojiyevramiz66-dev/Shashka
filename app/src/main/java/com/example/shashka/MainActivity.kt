@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF1E1E1E) // Стильный темный фон приложения
+                color = Color(0xFF1E1E1E)
             ) {
                 CheckersScreen()
             }
@@ -47,7 +47,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Индикатор текущего хода
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
             modifier = Modifier.padding(bottom = 24.dp)
@@ -61,7 +60,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             )
         }
 
-        // Игровая доска с красивыми тенями и рамкой
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
@@ -82,13 +80,13 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                     .fillMaxHeight()
                                     .background(
                                         when {
-                                            isSelected -> Color(0xFFFFF176) // Яркая подсветка выбора
-                                            (row + col) % 2 != 0 -> Color(0xFF388E3C) // Насыщенный темно-зеленый
-                                            else -> Color(0xFFE8F5E9) // Светлая клетка
+                                            isSelected -> Color(0xFFFFF176)
+                                            (row + col) % 2 != 0 -> Color(0xFF388E3C)
+                                            else -> Color(0xFFE8F5E9)
                                         }
                                     )
                                     .clickable { viewModel.onCellClicked(cell.position) },
-                                alignment = Alignment.Center
+                                contentAlignment = Alignment.Center
                             ) {
                                 cell.piece?.let { piece ->
                                     CheckerPieceView(piece = piece)
@@ -106,7 +104,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 fun CheckerPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
     
-    // Красивые градиенты для объемных шашек
     val brush = if (isWhite) {
         Brush.radialGradient(
             colors = listOf(Color(0xFFFFFFFF), Color(0xFFB0BEC5))
@@ -129,14 +126,12 @@ fun CheckerPieceView(piece: CheckerPiece) {
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Если это дамка — рисуем красивую корону
         if (piece.type == PieceType.KING) {
             Text(
                 text = "👑",
                 fontSize = 22.sp
             )
         } else {
-            // Внутренний круг для объема обычной шашки
             Box(
                 modifier = Modifier
                     .fillMaxSize(0.6f)
