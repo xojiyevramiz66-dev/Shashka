@@ -122,7 +122,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Игровая доска с тонкими, изящными краями
+        // Игровая доска
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -134,8 +134,8 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     ),
                     shape = RoundedCornerShape(14.dp)
                 )
-                .border(5.dp, Color(0xFF3B2414), RoundedCornerShape(14.dp)) // Сделали рамку тоньше (было 12dp)
-                .padding(3.dp) // Небольшой внутренний отступ для идеальной видимости шашек по краям
+                .border(5.dp, Color(0xFF3B2414), RoundedCornerShape(14.dp))
+                .padding(3.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
@@ -193,7 +193,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:52", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Нижние кнопки
+        // Нижние кнопки управления
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -312,26 +312,66 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
             style = Stroke(width = radius * 0.04f)
         )
 
-        // 5. Корона или центр
+        // 5. Отрисовка точной короны из референса для дамок (KING)[span_1](start_span)[span_1](end_span)
         if (piece.type == PieceType.KING) {
-            val crownColor = Color(0xFFF4C430)
-            val crownPath = Path().apply {
-                val w = radius * 0.45f
-                val h = radius * 0.35f
-                val left = center.x - w / 2f
-                val top = center.y - h / 2f
+            val crownWidth = radius * 0.65f
+            val crownHeight = radius * 0.45f
+            val left = center.x - crownWidth / 2f
+            val top = center.y - crownHeight / 2f + radius * 0.05f
 
-                moveTo(left, top + h)
-                lineTo(left, top)
-                lineTo(left + w * 0.28f, top + h * 0.5f)
-                lineTo(left + w * 0.5f, top - h * 0.2f)
-                lineTo(left + w * 0.72f, top + h * 0.5f)
-                lineTo(left + w, top)
-                lineTo(left + w, top + h)
+            val crownBrush = Brush.verticalGradient(
+                colors = listOf(
+                    Color(0xFFFFE082),
+                    Color(0xFFF4C430),
+                    Color(0xFFC79100)
+                ),
+                startY = top,
+                endY = top + crownHeight
+            )
+
+            val crownPath = Path().apply {
+                moveTo(left + crownWidth * 0.08f, top + crownHeight)
+                lineTo(left + crownWidth * 0.92f, top + crownHeight)
+                lineTo(left + crownWidth, top + crownHeight * 0.18f)
+                lineTo(left + crownWidth * 0.72f, top + crownHeight * 0.58f)
+                lineTo(left + crownWidth * 0.5f, top - crownHeight * 0.05f)
+                lineTo(left + crownWidth * 0.28f, top + crownHeight * 0.58f)
+                lineTo(left, top + crownHeight * 0.18f)
                 close()
             }
-            drawPath(path = crownPath, color = crownColor)
-            drawPath(path = crownPath, color = Color(0xFFB8860B), style = Stroke(width = 2f))
+
+            drawPath(path = crownPath, brush = crownBrush)
+            drawPath(
+                path = crownPath,
+                color = Color(0xFF996B00),
+                style = Stroke(width = radius * 0.035f)
+            )
+
+            val ballRadius = radius * 0.055f
+            val ballColor = Color(0xFFFFF2B2)
+            val ballStroke = Color(0xFF996B00)
+
+            val leftBallCenter = Offset(left, top + crownHeight * 0.18f)
+            drawCircle(color = ballColor, radius = ballRadius, center = leftBallCenter)
+            drawCircle(color = ballStroke, radius = ballRadius, center = leftBallCenter, style = Stroke(width = 1.5f))
+
+            val centerBallCenter = Offset(left + crownWidth * 0.5f, top - crownHeight * 0.05f)
+            drawCircle(color = ballColor, radius = ballRadius * 1.1f, center = centerBallCenter)
+            drawCircle(color = ballStroke, radius = ballRadius * 1.1f, center = centerBallCenter, style = Stroke(width = 1.5f))
+
+            val rightBallCenter = Offset(left + crownWidth, top + crownHeight * 0.18f)
+            drawCircle(color = ballColor, radius = ballRadius, center = rightBallCenter)
+            drawCircle(color = ballStroke, radius = ballRadius, center = rightBallCenter, style = Stroke(width = 1.5f))
+
+            val baseLinePath = Path().apply {
+                moveTo(left + crownWidth * 0.12f, top + crownHeight * 0.82f)
+                lineTo(left + crownWidth * 0.88f, top + crownHeight * 0.82f)
+            }
+            drawPath(
+                path = baseLinePath,
+                color = Color(0xFF7A5200),
+                style = Stroke(width = radius * 0.04f)
+            )
         } else {
             drawCircle(
                 color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF777777),
