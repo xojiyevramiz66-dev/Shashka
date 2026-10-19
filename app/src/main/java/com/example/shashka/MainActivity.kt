@@ -3,6 +3,9 @@ package com.example.shashka
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -122,7 +125,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Ультра-качественная игровая доска
+        // Игровая доска
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -160,7 +163,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 cell.piece?.let { piece ->
-                                    UltraHD3DPieceView(piece = piece)
+                                    AnimatedPieceWrapper(piece = piece)
                                 }
                             }
                         }
@@ -222,17 +225,40 @@ fun BottomIconButton(icon: String) {
 }
 
 @Composable
+fun AnimatedPieceWrapper(piece: CheckerPiece) {
+    val scale = remember { Animatable(0.4f) }
+
+    LaunchedEffect(piece) {
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 220,
+                easing = FastOutSlowInEasing
+            )
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(all = (0.82f * (1f - scale.value) * 10).dp),
+        contentAlignment = Alignment.Center
+    ) {
+        UltraHD3DPieceView(piece = piece)
+    }
+}
+
+@Composable
 fun UltraHD3DPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
 
     Canvas(
-        modifier = Modifier
-            .fillMaxSize(0.82f)
+        modifier = Modifier.fillMaxSize(0.82f)
     ) {
         val radius = size.minDimension / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
 
-        // 1. Глубокая многослойная мягкая тень (создает эффект высоты фишки над доской)
+        // 1. Тень
         drawCircle(
             color = Color.Black.copy(alpha = 0.35f),
             radius = radius * 1.02f,
@@ -244,7 +270,7 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             center = center + Offset(radius * 0.02f, radius * 0.06f)
         )
 
-        // 2. Тело шашки с продвинутым 3D-градиентом освещения сверху
+        // 2. Градиент тела шашки
         val bodyBrush = if (isWhite) {
             Brush.radialGradient(
                 colors = listOf(
@@ -277,7 +303,6 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             center = center
         )
 
-        // Премиальный глянцевый ободок по краю
         drawCircle(
             color = if (isWhite) Color(0xFFC7B192) else Color(0xFF9EABB5),
             radius = radius * 0.95f,
@@ -285,7 +310,6 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             style = Stroke(width = radius * 0.07f)
         )
 
-        // Внутренний световой блик по верхней дуге (имитация отражения студийного света)
         drawCircle(
             color = Color.White.copy(alpha = if (isWhite) 0.4f else 0.15f),
             radius = radius * 0.90f,
@@ -293,7 +317,7 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             style = Stroke(width = radius * 0.03f)
         )
 
-        // 3. Первая концентрическая ступень (фаска) с теневым углублением
+        // 3. Фаска
         val outerRingRadius = radius * 0.68f
         drawCircle(
             color = if (isWhite) Color(0xFFFFFFFF) else Color(0xFF555555),
@@ -301,7 +325,6 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             center = center,
             style = Stroke(width = radius * 0.05f)
         )
-        // Теневой внутренний контур фаски (Ambient Occlusion)
         drawCircle(
             color = if (isWhite) Color(0xFF9E845E) else Color(0xFF0D0D0D),
             radius = outerRingRadius - radius * 0.035f,
@@ -309,7 +332,7 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             style = Stroke(width = radius * 0.045f)
         )
 
-        // 4. Внутренняя чаша (центральное углубление)
+        // 4. Внутренняя выемка
         val innerBrush = if (isWhite) {
             Brush.radialGradient(
                 colors = listOf(Color(0xFFFFFFFF), Color(0xFFE8D7BE), Color(0xFFC2A884)),
@@ -338,14 +361,13 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             style = Stroke(width = radius * 0.035f)
         )
 
-        // 5. Корона высшего качества для дамок (KING)
+        // 5. Корона для дамок
         if (piece.type == PieceType.KING) {
             val crownWidth = radius * 0.68f
             val crownHeight = radius * 0.48f
             val left = center.x - crownWidth / 2f
             val top = center.y - crownHeight / 2f + radius * 0.04f
 
-            // Роскошный золотой градиент с зеркальным переливом
             val crownBrush = Brush.verticalGradient(
                 colors = listOf(
                     Color(0xFFFFF8E1),
@@ -368,43 +390,26 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
                 close()
             }
 
-            // Тень под короной для максимального объема
-            drawPath(
-                path = crownPath,
-                color = Color.Black.copy(alpha = 0.4f)
-            )
-
-            // Основная заливка короны
+            drawPath(path = crownPath, color = Color.Black.copy(alpha = 0.4f))
             drawPath(path = crownPath, brush = crownBrush)
-            
-            // Четкий контур короны
-            drawPath(
-                path = crownPath,
-                color = Color(0xFF795548),
-                style = Stroke(width = radius * 0.03f)
-            )
+            drawPath(path = crownPath, color = Color(0xFF795548), style = Stroke(width = radius * 0.03f))
 
-            // Жемчужные шарики на вершинах зубцов с зеркальным бликом
             val ballRadius = radius * 0.06f
             val ballColor = Color(0xFFFFFFFF)
             val ballStroke = Color(0xFF8C6D14)
 
-            // Левый шарик
             val leftBallCenter = Offset(left, top + crownHeight * 0.16f)
             drawCircle(color = ballColor, radius = ballRadius, center = leftBallCenter)
             drawCircle(color = ballStroke, radius = ballRadius, center = leftBallCenter, style = Stroke(width = 1.5f))
 
-            // Центральный шарик (выше остальных)
             val centerBallCenter = Offset(left + crownWidth * 0.5f, top - crownHeight * 0.08f)
             drawCircle(color = ballColor, radius = ballRadius * 1.15f, center = centerBallCenter)
             drawCircle(color = ballStroke, radius = ballRadius * 1.15f, center = centerBallCenter, style = Stroke(width = 1.5f))
 
-            // Правый шарик
             val rightBallCenter = Offset(left + crownWidth, top + crownHeight * 0.16f)
             drawCircle(color = ballColor, radius = ballRadius, center = rightBallCenter)
             drawCircle(color = ballStroke, radius = ballRadius, center = rightBallCenter, style = Stroke(width = 1.5f))
 
-            // Декоративная линия основания короны
             val baseLinePath = Path().apply {
                 moveTo(left + crownWidth * 0.14f, top + crownHeight * 0.82f)
                 lineTo(left + crownWidth * 0.86f, top + crownHeight * 0.82f)
@@ -415,7 +420,6 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
                 style = Stroke(width = radius * 0.04f)
             )
         } else {
-            // Элегантный внутренний круговой акцент для обычной шашки
             drawCircle(
                 color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF888888),
                 radius = radius * 0.22f,
