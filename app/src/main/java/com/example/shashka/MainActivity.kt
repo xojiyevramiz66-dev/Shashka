@@ -47,6 +47,9 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     val board = viewModel.boardState
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
+    
+    // Получаем список доступных ходов для текущей выбранной шашки из ViewModel
+    val validMoves = viewModel.validMoves
 
     Column(
         modifier = Modifier
@@ -147,6 +150,9 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
+                            // Проверяем, является ли эта клетка доступным ходом для выбранной шашки
+                            val isAvailableMove = validMoves.any { it.row == row && it.col == col }
+
                             val isDarkCell = (row + col) % 2 != 0
                             val cellBackground = when {
                                 isSelected -> Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFE5A912)))
@@ -162,6 +168,17 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                     .clickable { viewModel.onCellClicked(cell.position) },
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Подсветка доступного хода (аккуратный неоново-зеленый маркер в стиле концепта)
+                                if (isAvailableMove && cell.piece == null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .shadow(4.dp, CircleShape)
+                                            .background(Color(0xFF4CAF50), CircleShape) // Неоново-зеленый цвет из палитры
+                                            .border(2.dp, Color(0xFF81C784), CircleShape)
+                                    )
+                                }
+
                                 cell.piece?.let { piece ->
                                     AnimatedPieceWrapper(piece = piece)
                                 }
