@@ -20,6 +20,9 @@ class CheckersViewModel : ViewModel() {
     var currentPlayer by mutableStateOf(PlayerColor.WHITE)
         private set
 
+    // Хранит позицию шашки, которая обязана продолжить бить (в режиме серии ударов)
+    private var mandatoryCapturingPiece: Position? = null
+
     private val moveHistory = mutableListOf<Array<Array<Cell>>>()
 
     private fun createInitialBoard(): Array<Array<Cell>> {
@@ -44,23 +47,47 @@ class CheckersViewModel : ViewModel() {
         val cell = boardState[pos.row][pos.col]
 
         if (currentSelected == null) {
+            // Если идет серия взятий, можно выбирать только ту же шашку, которая бьет дальше
+            if (mandatoryCapturingPiece != null && mandatoryCapturingPiece != pos) return
+
             if (cell.piece?.color == currentPlayer) {
+                // Если включено обязательное взятие, проверим, есть ли у этой шашки доступные удары
+                if (mandatoryCapturingPiece == null && hasAnyCapturesOnBoard(currentPlayer) && !hasCaptureMovesForPiece(boardState, pos)) {
+                    return // Нельзя ходить простой шашкой, если можно бить
+                }
                 selectedPosition = pos
                 updateHighlights(pos)
             }
         } else {
             if (currentSelected == pos) {
-                selectedPosition = null
-                clearHighlights()
+                // Если серия взятий не в процессе, можно отменить выбор
+                if (mandatoryCapturingPiece == null) {
+                    selectedPosition = null
+                    clearHighlights()
+                }
             } else if (isValidMoveOnBoard(boardState, currentSelected, pos)) {
                 saveStateToHistory()
-                executeMoveWithCapture(currentSelected, pos)
-                selectedPosition = null
-                clearHighlights()
+                val isCapture = isCaptureMove(currentSelected, pos)
+                val movedPiece = boardState[currentSelected.row][currentSelected.col].piece
 
-                currentPlayer = PlayerColor.BLACK
-                makeAIMove()
-            } else if (cell.piece?.color == currentPlayer) {
+                executeMoveWithCapture(currentSelected, pos)
+
+                // Проверяем, может ли эта же шашка продолжить бить (серия из 2-3 ходов)
+                if (isCapture && movedPiece != null && hasCaptureMovesForPiece(boardState, pos)) {
+                    // Продолжаем ход той же шашкой
+                    selectedPosition = pos
+                    mandatoryCapturingPiece = pos
+                    updateHighlights(pos)
+                } else {
+                    // Серия завершена, передаем ход ИИ
+                    selectedPosition = null
+                    mandatoryCapturingPiece = null
+                    clearHighlights()
+
+                    currentPlayer = PlayerColor.BLACK
+                    makeAIMove()
+                }
+            } else if (mandatoryCapturingPiece == null && cell.piece?.color == currentPlayer) {
                 selectedPosition = pos
                 updateHighlights(pos)
             }
@@ -68,10 +95,12 @@ class CheckersViewModel : ViewModel() {
     }
 
     fun undo() {
+        if (mandatoryCapturingPiece != null) return // Не отменяем посреди серии взятий
         if (moveHistory.isNotEmpty()) {
             boardState = moveHistory.removeAt(moveHistory.lastIndex)
             currentPlayer = PlayerColor.WHITE
             selectedPosition = null
+            mandatoryCapturingPiece = null
             clearHighlights()
         }
     }
@@ -105,7 +134,6 @@ class CheckersViewModel : ViewModel() {
         boardState = newBoard
     }
 
-    // Универсальная проверка возможности взятия фигуры по пути
     private fun findCapturedPiece(board: Array<Array<Cell>>, from: Position, to: Position): Position? {
         val rowDiff = to.row - from.row
         val colDiff = to.col - from.col
@@ -131,6 +159,34 @@ class CheckersViewModel : ViewModel() {
         return if (opponentCount == 1) capturedPos else null
     }
 
+    private fun isCaptureMove(from: Position, to: Position): Boolean {
+        return findCapturedPiece(boardState, from, to) != null
+    }
+
+    private fun hasCaptureMovesForPiece(board: Array<Array<Cell>>, pos: Position): Boolean {
+        for (r in 0..7) {
+            for (c in 0..7) {
+                val to = Position(r, c)
+                if (isValidMoveOnBoard(board, pos, to) && findCapturedPiece(board, pos, to) != null) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private fun hasAnyCapturesOnBoard(color: PlayerColor): Boolean {
+        for (r in 0..7) {
+            for (c in 0..7) {
+                val piece = boardState[r][c].piece
+                if (piece?.color == color) {
+                    if (hasCaptureMovesForPiece(boardState, Position(r, c))) return true
+                }
+            }
+        }
+        return false
+    }
+
     private fun isValidMoveOnBoard(board: Array<Array<Cell>>, from: Position, to: Position): Boolean {
         if (board[to.row][to.col].piece != null) return false
         val piece = board[from.row][from.col].piece ?: return false
@@ -140,11 +196,17 @@ class CheckersViewModel : ViewModel() {
 
         if (kotlin.math.abs(rowDiff) != kotlin.math.abs(colDiff)) return false
 
+        // Если идет серия ударов, разрешены только ходы с взятием
+        if (mandatoryCapturingPiece != null && mandatoryCapturingPiece == from) {
+            val captured = findCapturedPiece(board, from, to)
+            return captured != null && board[captured.row][captured.col].piece?.color != piece.color
+        }
+
         if (piece.type == PieceType.PAWN) {
             val forwardDir = if (piece.color == PlayerColor.WHITE) -1 else 1
-            if (steps == 1) {
+            if (steps == 1 && mandatoryCapturingPiece == null) {
                 return rowDiff == forwardDir
-            } else if (steps == 2) {
+            } else if (steps == 2 || steps > 1) {
                 val captured = findCapturedPiece(board, from, to)
                 return captured != null && board[captured.row][captured.col].piece?.color != piece.color
             }
@@ -165,7 +227,7 @@ class CheckersViewModel : ViewModel() {
                 r += rowStep
                 c += colStep
             }
-            return !blocked
+            return !blocked && (captured != null || mandatoryCapturingPiece == null)
         }
         return false
     }
@@ -180,13 +242,11 @@ class CheckersViewModel : ViewModel() {
         var piece = newBoard[from.row][from.col].piece
         newBoard[from.row][from.col] = newBoard[from.row][from.col].copy(piece = null)
 
-        // Удаляем сбитую фигуру (если таковая была на пути)
         val capturedPos = findCapturedPiece(newBoard, from, to)
         if (capturedPos != null) {
             newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
         }
 
-        // Превращение в дамку
         if (piece != null) {
             if (piece.color == PlayerColor.WHITE && to.row == 0) {
                 piece = piece.copy(type = PieceType.KING)
