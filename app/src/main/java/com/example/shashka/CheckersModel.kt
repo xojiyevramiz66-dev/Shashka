@@ -1,3 +1,5 @@
+package com.example.shashka
+
 import androidx.compose.ui.graphics.Color
 
 // Цвет/Игрок
