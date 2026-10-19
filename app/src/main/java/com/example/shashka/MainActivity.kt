@@ -122,19 +122,19 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Игровая доска
+        // Ультра-качественная игровая доска
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .shadow(20.dp, RoundedCornerShape(14.dp))
+                .shadow(24.dp, RoundedCornerShape(14.dp))
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color(0xFF4E3621), Color(0xFF2B1A0E))
+                        colors = listOf(Color(0xFF5A3E26), Color(0xFF231409))
                     ),
                     shape = RoundedCornerShape(14.dp)
                 )
-                .border(5.dp, Color(0xFF3B2414), RoundedCornerShape(14.dp))
+                .border(5.dp, Color(0xFF352011), RoundedCornerShape(14.dp))
                 .padding(3.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -146,9 +146,9 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             
                             val isDarkCell = (row + col) % 2 != 0
                             val cellBackground = when {
-                                isSelected -> Brush.linearGradient(listOf(Color(0xFFF4C430), Color(0xFFD4A017)))
-                                isDarkCell -> Brush.verticalGradient(listOf(Color(0xFF4A2F1B), Color(0xFF362010)))
-                                else -> Brush.verticalGradient(listOf(Color(0xFFEADBCE), Color(0xFFCBB6A4)))
+                                isSelected -> Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFE5A912)))
+                                isDarkCell -> Brush.verticalGradient(listOf(Color(0xFF482D1B), Color(0xFF2C190D)))
+                                else -> Brush.verticalGradient(listOf(Color(0xFFF2E6D8), Color(0xFFD6C0A8)))
                             }
 
                             Box(
@@ -160,7 +160,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 cell.piece?.let { piece ->
-                                    Realistic3DPieceView(piece = piece)
+                                    UltraHD3DPieceView(piece = piece)
                                 }
                             }
                         }
@@ -222,83 +222,109 @@ fun BottomIconButton(icon: String) {
 }
 
 @Composable
-fun Realistic3DPieceView(piece: CheckerPiece) {
+fun UltraHD3DPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
 
     Canvas(
         modifier = Modifier
-            .fillMaxSize(0.80f)
+            .fillMaxSize(0.82f)
     ) {
         val radius = size.minDimension / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
 
-        // 1. Падающая тень под шашкой
+        // 1. Глубокая многослойная мягкая тень (создает эффект высоты фишки над доской)
         drawCircle(
-            color = Color.Black.copy(alpha = 0.5f),
-            radius = radius * 0.96f,
-            center = center + Offset(radius * 0.06f, radius * 0.1f)
+            color = Color.Black.copy(alpha = 0.35f),
+            radius = radius * 1.02f,
+            center = center + Offset(radius * 0.04f, radius * 0.12f)
+        )
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.25f),
+            radius = radius * 0.98f,
+            center = center + Offset(radius * 0.02f, radius * 0.06f)
         )
 
-        // 2. Внешнее тело шашки
+        // 2. Тело шашки с продвинутым 3D-градиентом освещения сверху
         val bodyBrush = if (isWhite) {
             Brush.radialGradient(
-                colors = listOf(Color(0xFFFFFFFF), Color(0xFFFAF3E6), Color(0xFFE2CEB1), Color(0xFF9E8462)),
-                center = center - Offset(radius * 0.25f, radius * 0.3f),
-                radius = radius * 1.3f
+                colors = listOf(
+                    Color(0xFFFFFFFF),
+                    Color(0xFFFAF4E8),
+                    Color(0xFFE3D0B5),
+                    Color(0xFFB39872),
+                    Color(0xFF7A613F)
+                ),
+                center = center - Offset(radius * 0.3f, radius * 0.35f),
+                radius = radius * 1.4f
             )
         } else {
             Brush.radialGradient(
-                colors = listOf(Color(0xFF666666), Color(0xFF333333), Color(0xFF161616), Color(0xFF050505)),
-                center = center - Offset(radius * 0.25f, radius * 0.3f),
-                radius = radius * 1.3f
+                colors = listOf(
+                    Color(0xFF6E6E6E),
+                    Color(0xFF383838),
+                    Color(0xFF1C1C1C),
+                    Color(0xFF0A0A0A),
+                    Color(0xFF000000)
+                ),
+                center = center - Offset(radius * 0.3f, radius * 0.35f),
+                radius = radius * 1.4f
             )
         }
 
         drawCircle(
             brush = bodyBrush,
-            radius = radius * 0.94f,
+            radius = radius * 0.95f,
             center = center
         )
 
-        // Контур шашки
+        // Премиальный глянцевый ободок по краю
         drawCircle(
-            color = if (isWhite) Color(0xFFB59A74) else Color(0xFFB0BEC5),
-            radius = radius * 0.94f,
+            color = if (isWhite) Color(0xFFC7B192) else Color(0xFF9EABB5),
+            radius = radius * 0.95f,
             center = center,
-            style = Stroke(width = radius * 0.08f)
+            style = Stroke(width = radius * 0.07f)
         )
 
-        // 3. Первое концентрическое кольцо (фаска)
-        val outerRingRadius = radius * 0.7f
+        // Внутренний световой блик по верхней дуге (имитация отражения студийного света)
         drawCircle(
-            color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.9f) else Color(0xFF666666),
+            color = Color.White.copy(alpha = if (isWhite) 0.4f else 0.15f),
+            radius = radius * 0.90f,
+            center = center - Offset(0f, radius * 0.05f),
+            style = Stroke(width = radius * 0.03f)
+        )
+
+        // 3. Первая концентрическая ступень (фаска) с теневым углублением
+        val outerRingRadius = radius * 0.68f
+        drawCircle(
+            color = if (isWhite) Color(0xFFFFFFFF) else Color(0xFF555555),
             radius = outerRingRadius,
             center = center,
             style = Stroke(width = radius * 0.05f)
         )
+        // Теневой внутренний контур фаски (Ambient Occlusion)
         drawCircle(
-            color = if (isWhite) Color(0xFFB59A74) else Color(0xFF1E1E1E),
-            radius = outerRingRadius - radius * 0.04f,
+            color = if (isWhite) Color(0xFF9E845E) else Color(0xFF0D0D0D),
+            radius = outerRingRadius - radius * 0.035f,
             center = center,
-            style = Stroke(width = radius * 0.04f)
+            style = Stroke(width = radius * 0.045f)
         )
 
-        // 4. Внутренняя чаша
+        // 4. Внутренняя чаша (центральное углубление)
         val innerBrush = if (isWhite) {
             Brush.radialGradient(
-                colors = listOf(Color(0xFFFFFFFF), Color(0xFFE4D2B8), Color(0xFFBCA17D)),
+                colors = listOf(Color(0xFFFFFFFF), Color(0xFFE8D7BE), Color(0xFFC2A884)),
                 center = center - Offset(radius * 0.15f, radius * 0.2f),
-                radius = radius * 0.8f
+                radius = radius * 0.75f
             )
         } else {
             Brush.radialGradient(
-                colors = listOf(Color(0xFF444444), Color(0xFF222222), Color(0xFF0B0B0B)),
+                colors = listOf(Color(0xFF4A4A4A), Color(0xFF222222), Color(0xFF080808)),
                 center = center - Offset(radius * 0.15f, radius * 0.2f),
-                radius = radius * 0.8f
+                radius = radius * 0.75f
             )
         }
 
-        val innerRadius = radius * 0.5f
+        val innerRadius = radius * 0.48f
         drawCircle(
             brush = innerBrush,
             radius = innerRadius,
@@ -306,78 +332,95 @@ fun Realistic3DPieceView(piece: CheckerPiece) {
         )
 
         drawCircle(
-            color = if (isWhite) Color(0xFF9E8360) else Color(0xFF0A0A0A),
+            color = if (isWhite) Color(0xFF8F734E) else Color(0xFF030303),
             radius = innerRadius,
             center = center,
-            style = Stroke(width = radius * 0.04f)
+            style = Stroke(width = radius * 0.035f)
         )
 
-        // 5. Отрисовка точной короны из референса для дамок (KING)[span_1](start_span)[span_1](end_span)
+        // 5. Корона высшего качества для дамок (KING)
         if (piece.type == PieceType.KING) {
-            val crownWidth = radius * 0.65f
-            val crownHeight = radius * 0.45f
+            val crownWidth = radius * 0.68f
+            val crownHeight = radius * 0.48f
             val left = center.x - crownWidth / 2f
-            val top = center.y - crownHeight / 2f + radius * 0.05f
+            val top = center.y - crownHeight / 2f + radius * 0.04f
 
+            // Роскошный золотой градиент с зеркальным переливом
             val crownBrush = Brush.verticalGradient(
                 colors = listOf(
-                    Color(0xFFFFE082),
-                    Color(0xFFF4C430),
-                    Color(0xFFC79100)
+                    Color(0xFFFFF8E1),
+                    Color(0xFFFFD54F),
+                    Color(0xFFF57F17),
+                    Color(0xFFB78103)
                 ),
                 startY = top,
                 endY = top + crownHeight
             )
 
             val crownPath = Path().apply {
-                moveTo(left + crownWidth * 0.08f, top + crownHeight)
-                lineTo(left + crownWidth * 0.92f, top + crownHeight)
-                lineTo(left + crownWidth, top + crownHeight * 0.18f)
-                lineTo(left + crownWidth * 0.72f, top + crownHeight * 0.58f)
-                lineTo(left + crownWidth * 0.5f, top - crownHeight * 0.05f)
-                lineTo(left + crownWidth * 0.28f, top + crownHeight * 0.58f)
-                lineTo(left, top + crownHeight * 0.18f)
+                moveTo(left + crownWidth * 0.06f, top + crownHeight)
+                lineTo(left + crownWidth * 0.94f, top + crownHeight)
+                lineTo(left + crownWidth, top + crownHeight * 0.16f)
+                lineTo(left + crownWidth * 0.72f, top + crownHeight * 0.55f)
+                lineTo(left + crownWidth * 0.5f, top - crownHeight * 0.08f)
+                lineTo(left + crownWidth * 0.28f, top + crownHeight * 0.55f)
+                lineTo(left, top + crownHeight * 0.16f)
                 close()
             }
 
-            drawPath(path = crownPath, brush = crownBrush)
+            // Тень под короной для максимального объема
             drawPath(
                 path = crownPath,
-                color = Color(0xFF996B00),
-                style = Stroke(width = radius * 0.035f)
+                color = Color.Black.copy(alpha = 0.4f)
             )
 
-            val ballRadius = radius * 0.055f
-            val ballColor = Color(0xFFFFF2B2)
-            val ballStroke = Color(0xFF996B00)
+            // Основная заливка короны
+            drawPath(path = crownPath, brush = crownBrush)
+            
+            // Четкий контур короны
+            drawPath(
+                path = crownPath,
+                color = Color(0xFF795548),
+                style = Stroke(width = radius * 0.03f)
+            )
 
-            val leftBallCenter = Offset(left, top + crownHeight * 0.18f)
+            // Жемчужные шарики на вершинах зубцов с зеркальным бликом
+            val ballRadius = radius * 0.06f
+            val ballColor = Color(0xFFFFFFFF)
+            val ballStroke = Color(0xFF8C6D14)
+
+            // Левый шарик
+            val leftBallCenter = Offset(left, top + crownHeight * 0.16f)
             drawCircle(color = ballColor, radius = ballRadius, center = leftBallCenter)
             drawCircle(color = ballStroke, radius = ballRadius, center = leftBallCenter, style = Stroke(width = 1.5f))
 
-            val centerBallCenter = Offset(left + crownWidth * 0.5f, top - crownHeight * 0.05f)
-            drawCircle(color = ballColor, radius = ballRadius * 1.1f, center = centerBallCenter)
-            drawCircle(color = ballStroke, radius = ballRadius * 1.1f, center = centerBallCenter, style = Stroke(width = 1.5f))
+            // Центральный шарик (выше остальных)
+            val centerBallCenter = Offset(left + crownWidth * 0.5f, top - crownHeight * 0.08f)
+            drawCircle(color = ballColor, radius = ballRadius * 1.15f, center = centerBallCenter)
+            drawCircle(color = ballStroke, radius = ballRadius * 1.15f, center = centerBallCenter, style = Stroke(width = 1.5f))
 
-            val rightBallCenter = Offset(left + crownWidth, top + crownHeight * 0.18f)
+            // Правый шарик
+            val rightBallCenter = Offset(left + crownWidth, top + crownHeight * 0.16f)
             drawCircle(color = ballColor, radius = ballRadius, center = rightBallCenter)
             drawCircle(color = ballStroke, radius = ballRadius, center = rightBallCenter, style = Stroke(width = 1.5f))
 
+            // Декоративная линия основания короны
             val baseLinePath = Path().apply {
-                moveTo(left + crownWidth * 0.12f, top + crownHeight * 0.82f)
-                lineTo(left + crownWidth * 0.88f, top + crownHeight * 0.82f)
+                moveTo(left + crownWidth * 0.14f, top + crownHeight * 0.82f)
+                lineTo(left + crownWidth * 0.86f, top + crownHeight * 0.82f)
             }
             drawPath(
                 path = baseLinePath,
-                color = Color(0xFF7A5200),
+                color = Color(0xFF5D4037),
                 style = Stroke(width = radius * 0.04f)
             )
         } else {
+            // Элегантный внутренний круговой акцент для обычной шашки
             drawCircle(
-                color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.7f) else Color(0xFF777777),
-                radius = radius * 0.24f,
+                color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF888888),
+                radius = radius * 0.22f,
                 center = center,
-                style = Stroke(width = radius * 0.03f)
+                style = Stroke(width = radius * 0.035f)
             )
         }
     }
