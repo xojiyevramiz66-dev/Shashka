@@ -35,11 +35,45 @@ class CheckersViewModel : ViewModel() {
     var currentPlayer by mutableStateOf(PlayerColor.WHITE)
         private set
 
+    // Храним позицию шашки, которая обязана продолжить бой (серия срубаний)
+    private var mustCaptureFrom: BoardPosition? = null
+
     fun onCellClicked(position: BoardPosition) {
         if (currentPlayer != PlayerColor.WHITE) return
 
         val clickedCell = boardState[position.row][position.col]
         val currentSelected = selectedPosition
+
+        if (mustCaptureFrom != null) {
+            // Если идет серия срубаний, кликать можно только той же шашкой
+            if (currentSelected == null) {
+                if (position == mustCaptureFrom) {
+                    selectedPosition = position
+                }
+            } else {
+                val moveResult = executeMoveIfValid(boardState, currentSelected, position)
+                if (moveResult != null && moveResult.second != null) { // Был ли совершен прыжок/бой
+                    boardState = moveResult.first
+                    val newPos = position
+                    // Проверяем, может ли эта же шашка бить дальше
+                    if (getPossibleCapturesForPiece(boardState, newPos).isNotEmpty()) {
+                        selectedPosition = newPos
+                        mustCaptureFrom = newPos
+                    } else {
+                        selectedPosition = null
+                        mustCaptureFrom = null
+                        currentPlayer = PlayerColor.BLACK
+                        viewModelScope.launch {
+                            delay(400)
+                            makeSuperAiMove()
+                        }
+                    }
+                } else {
+                    selectedPosition = null
+                }
+            }
+            return
+        }
 
         if (currentSelected == null) {
             if (clickedCell.piece != null && clickedCell.piece.color == currentPlayer) {
@@ -50,11 +84,22 @@ class CheckersViewModel : ViewModel() {
                 selectedPosition = null
             } else {
                 if (clickedCell.piece == null) {
-                    if (tryMakeMoveOrCapture(currentSelected, position)) {
-                        currentPlayer = PlayerColor.BLACK
-                        viewModelScope.launch {
-                            delay(400)
-                            makeSuperAiMove()
+                    val moveResult = executeMoveIfValid(boardState, currentSelected, position)
+                    if (moveResult != null) {
+                        boardState = moveResult.first
+                        val isCapture = moveResult.second != null
+                        
+                        // Если был бой и с этой же позиции можно бить дальше — продолжаем серию!
+                        if (isCapture && getPossibleCapturesForPiece(boardState, position).isNotEmpty()) {
+                            selectedPosition = position
+                            mustCaptureFrom = position
+                        } else {
+                            selectedPosition = null
+                            currentPlayer = PlayerColor.BLACK
+                            viewModelScope.launch {
+                                delay(400)
+                                makeSuperAiMove()
+                            }
                         }
                     } else {
                         selectedPosition = null
@@ -70,15 +115,8 @@ class CheckersViewModel : ViewModel() {
         }
     }
 
-    private fun tryMakeMoveOrCapture(from: BoardPosition, to: BoardPosition): Boolean {
-        return executeMoveIfValid(boardState, from, to)?.let { newBoard ->
-            boardState = newBoard
-            selectedPosition = null
-            true
-        } ?: false
-    }
-
-    private fun executeMoveIfValid(board: Array<Array<Cell>>, from: BoardPosition, to: BoardPosition): Array<Array<Cell>>? {
+    // Возвращает новый Board и позицию срубленной фигуры (если это был прыжок/бой)
+    private fun executeMoveIfValid(board: Array<Array<Cell>>, from: BoardPosition, to: BoardPosition): Pair<Array<Array<Cell>>, BoardPosition?>? {
         val rowDiff = to.row - from.row
         val colDiff = to.col - from.col
         val movingPiece = board[from.row][from.col].piece ?: return null
@@ -112,6 +150,8 @@ class CheckersViewModel : ViewModel() {
             if (steps == 1 && enemyPos != null) return null
             val isForward = if (movingPiece.color == PlayerColor.WHITE) rowDiff == -1 else rowDiff == 1
             if (steps == 1 && !isForward) return null
+        } else {
+            if (steps >= 2 && enemyPos == null) return null
         }
 
         val newBoard = board.map { it.clone() }.toTypedArray()
@@ -127,7 +167,23 @@ class CheckersViewModel : ViewModel() {
             newBoard[enemyPos.row][enemyPos.col] = newBoard[enemyPos.row][enemyPos.col].copy(piece = null)
         }
 
-        return newBoard
+        return Pair(newBoard, enemyPos)
+    }
+
+    private fun getPossibleCapturesForPiece(board: Array<Array<Cell>>, pos: BoardPosition): List<BoardPosition> {
+        val captures = mutableListOf<BoardPosition>()
+        val piece = board[pos.row][pos.col].piece ?: return captures
+        
+        for (tr in 0..7) {
+            for (tc in 0..7) {
+                val to = BoardPosition(tr, tc)
+                val res = executeMoveIfValid(board, pos, to)
+                if (res != null && res.second != null) {
+                    captures.add(to)
+                }
+            }
+        }
+        return captures
     }
 
     private fun getAllValidMoves(board: Array<Array<Cell>>, color: PlayerColor): List<Pair<BoardPosition, BoardPosition>> {
@@ -142,9 +198,9 @@ class CheckersViewModel : ViewModel() {
                     for (tr in 0..7) {
                         for (tc in 0..7) {
                             val to = BoardPosition(tr, tc)
-                            if (executeMoveIfValid(board, from, to) != null) {
-                                val rowDiff = abs(tr - r)
-                                if (rowDiff >= 2) {
+                            val res = executeMoveIfValid(board, from, to)
+                            if (res != null) {
+                                if (res.second != null) {
                                     captures.add(Pair(from, to))
                                 } else {
                                     moves.add(Pair(from, to))
@@ -155,30 +211,52 @@ class CheckersViewModel : ViewModel() {
                 }
             }
         }
-        // В шашках бой обязателен, если есть взятие
         return if (captures.isNotEmpty()) captures else moves
     }
 
-    // Сверхмощный ИИ с оценкой позиции
     private fun makeSuperAiMove() {
         if (currentPlayer != PlayerColor.BLACK) return
 
-        val allMoves = getAllValidMoves(boardState, PlayerColor.BLACK)
-        if (allMoves.isNotEmpty()) {
-            // Ищем лучший ход на 3 шага вперед (Minimax)
-            var bestScore = -999999
-            var bestMove = allMoves.random()
+        var currentBoard = boardState
+        var aiMovesCount = 0
 
-            for (move in allMoves) {
-                val nextBoard = executeMoveIfValid(boardState, move.first, move.second) ?: continue
-                val score = minimax(nextBoard, 3, false, -1000000, 1000000)
+        // Цикл для поддержки множественного взятия у ИИ (двойной/тройной удар)
+        while (aiMovesCount < 3) {
+            val allMoves = getAllValidMoves(currentBoard, PlayerColor.BLACK)
+            val captureMoves = allMoves.filter { move ->
+                val res = executeMoveIfValid(currentBoard, move.first, move.second)
+                res?.second != null
+            }
+
+            val movesToConsider = if (captureMoves.isNotEmpty()) captureMoves else allMoves
+            if (movesToConsider.isEmpty()) break
+
+            var bestScore = -999999
+            var bestMove = movesToConsider.random()
+
+            for (move in movesToConsider) {
+                val nextBoard = executeMoveIfValid(currentBoard, move.first, move.second)?.first ?: continue
+                val score = minimax(nextBoard, 2, false, -1000000, 1000000)
                 if (score > bestScore) {
                     bestScore = score
                     bestMove = move
                 }
             }
 
-            boardState = executeMoveIfValid(boardState, bestMove.first, bestMove.second) ?: boardState
+            val result = executeMoveIfValid(currentBoard, bestMove.first, bestMove.second) ?: break
+            currentBoard = result.first
+            boardState = currentBoard
+
+            // Если был бой, проверяем, может ли эта же шашка бить дальше
+            val landingPos = bestMove.second
+            val nextCaptures = getPossibleCapturesForPiece(currentBoard, landingPos)
+            if (result.second != null && nextCaptures.isNotEmpty()) {
+                aiMovesCount++
+                // Небольшая пауза для зрелищности двойного удара
+                try { Thread.sleep(300) } catch (e: Exception) {}
+            } else {
+                break
+            }
         }
 
         currentPlayer = PlayerColor.WHITE
@@ -197,7 +275,7 @@ class CheckersViewModel : ViewModel() {
             val moves = getAllValidMoves(board, PlayerColor.BLACK)
             if (moves.isEmpty()) return -100000
             for (move in moves) {
-                val nextBoard = executeMoveIfValid(board, move.first, move.second) ?: continue
+                val nextBoard = executeMoveIfValid(board, move.first, move.second)?.first ?: continue
                 val eval = minimax(nextBoard, depth - 1, false, currentAlpha, currentBeta)
                 maxEval = maxOf(maxEval, eval)
                 currentAlpha = maxOf(currentAlpha, eval)
@@ -209,7 +287,7 @@ class CheckersViewModel : ViewModel() {
             val moves = getAllValidMoves(board, PlayerColor.WHITE)
             if (moves.isEmpty()) return 100000
             for (move in moves) {
-                val nextBoard = executeMoveIfValid(board, move.first, move.second) ?: continue
+                val nextBoard = executeMoveIfValid(board, move.first, move.second)?.first ?: continue
                 val eval = minimax(nextBoard, depth - 1, true, currentAlpha, currentBeta)
                 minEval = minOf(minEval, eval)
                 currentBeta = minOf(currentBeta, eval)
@@ -225,11 +303,11 @@ class CheckersViewModel : ViewModel() {
             for (c in 0..7) {
                 val piece = board[r][c].piece
                 if (piece != null) {
-                    val value = if (piece.type == PieceType.KING) 20 else 10
+                    val value = if (piece.type == PieceType.KING) 30 else 10
                     if (piece.color == PlayerColor.BLACK) {
-                        score += value + r // Черным выгодно продвигаться вниз
+                        score += value + r
                     } else {
-                        score -= value + (7 - r) // Белым выгодно продвигаться вверх
+                        score -= value + (7 - r)
                     }
                 }
             }
