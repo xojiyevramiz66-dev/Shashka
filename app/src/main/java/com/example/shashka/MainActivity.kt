@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF0D0907) // Насыщенный темный фон игрового пространства
+                color = Color(0xFF0D0907)
             ) {
                 CheckersScreen()
             }
@@ -47,7 +47,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Панель статуса хода высокого разрешения
+        // Статусная плашка
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1F140F)),
             elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
@@ -64,11 +64,11 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             )
         }
 
-        // Четкая игровая доска с качественной рамкой
+        // Игровая доска
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .shadow(32.dp, shape = MaterialTheme.shapes.medium)
+                .shadow(28.dp, shape = MaterialTheme.shapes.medium)
                 .border(10.dp, Color(0xFF2C1810), shape = MaterialTheme.shapes.medium)
                 .background(Color(0xFF795548))
         ) {
@@ -80,9 +80,9 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val isSelected = selected?.row == row && selected?.col == col
                             
                             val cellColor = when {
-                                isSelected -> Color(0xFFFFC107) // Золотисто-янтарная подсветка
-                                (row + col) % 2 != 0 -> Color(0xFF234E30) // Глубокий зеленый цвет сукна
-                                else -> Color(0xFFEFEBE9) // Текстурный светлый дуб
+                                isSelected -> Color(0xFFFFC107)
+                                (row + col) % 2 != 0 -> Color(0xFF234E30)
+                                else -> Color(0xFFEFEBE9)
                             }
 
                             Box(
@@ -109,34 +109,35 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 fun HDCheckerPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
     
-    // Плавные радиальные градиенты высокой четкости для шашек
+    // Плавные глубокие градиенты для шашек крупного размера
     val brush = if (isWhite) {
         Brush.radialGradient(
-            colors = listOf(Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E), Color(0xFF616161))
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFFB0BEC5), Color(0xFF78909C))
         )
     } else {
         Brush.radialGradient(
-            colors = listOf(Color(0xFF505050), Color(0xFF2E2E2E), Color(0xFF141414), Color(0xFF000000))
+            colors = listOf(Color(0xFF555555), Color(0xFF333333), Color(0xFF161616), Color(0xFF000000))
         )
     }
 
     Box(
         modifier = Modifier
-            .fillMaxSize(0.82f)
-            .shadow(12.dp, CircleShape)
+            .fillMaxSize(0.85f) // Возвращаем крупный размер шашек!
+            .shadow(4.dp, CircleShape) // Мягкая тень, которая не режется
             .background(brush, shape = CircleShape)
             .border(
                 width = 3.dp,
-                color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF111111),
+                // Контрастный и хорошо видимый контур по всему периметру шашки
+                color = if (isWhite) Color(0xFF90A4AE) else Color(0xFF9E9E9E),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
     ) {
         if (piece.type == PieceType.KING) {
-            // Корона дамки с объемным золотым сиянием
+            // Корона дамки
             Box(
                 modifier = Modifier
-                    .fillMaxSize(0.7f)
+                    .fillMaxSize(0.68f)
                     .background(
                         Brush.radialGradient(listOf(Color(0xFFFFEE58), Color(0xFFFF8F00))),
                         shape = CircleShape
@@ -146,17 +147,17 @@ fun HDCheckerPieceView(piece: CheckerPiece) {
             ) {
                 Text(
                     text = "👑",
-                    fontSize = 22.sp
+                    fontSize = 20.sp
                 )
             }
         } else {
-            // Аккуратная внутренняя фаска обычной шашки
+            // Четкая внутренняя выемка (фаска)
             Box(
                 modifier = Modifier
-                    .fillMaxSize(0.58f)
+                    .fillMaxSize(0.6f)
                     .border(
                         width = 1.5.dp,
-                        color = if (isWhite) Color(0xFF90A4AE) else Color(0xFF424242),
+                        color = if (isWhite) Color(0xFFCFD8DC) else Color(0xFF424242),
                         shape = CircleShape
                     )
             )
