@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF0F0F0F) // Ультра-темный премиум-фон
+                color = Color(0xFF0A0A0A) // Глубокий черный фон студии
             ) {
                 CheckersScreen()
             }
@@ -47,30 +47,30 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Статусная строка хода
+        // Статусная панель хода с неоновым акцентом
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF181818)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
             modifier = Modifier
-                .padding(bottom = 24.dp)
-                .border(1.5.dp, Color(0xFF444444), MaterialTheme.shapes.medium)
+                .padding(bottom = 28.dp)
+                .border(1.dp, Color(0xFF333333), MaterialTheme.shapes.medium)
         ) {
             Text(
                 text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход (Белые)" else "ИИ думает...",
                 color = if (currentPlayer == PlayerColor.WHITE) Color(0xFF81C784) else Color(0xFFE57373),
-                fontSize = 18.sp,
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 14.dp)
+                modifier = Modifier.padding(horizontal = 36.dp, vertical = 14.dp)
             )
         }
 
-        // Премиальная игровая доска
+        // Элегантная доска с деревянной рамой
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .shadow(24.dp, shape = MaterialTheme.shapes.medium)
-                .border(8.dp, Color(0xFF2C1E18), shape = MaterialTheme.shapes.medium) // Эффект багета из темного дерева
-                .background(Color(0xFFBCAAA4))
+                .shadow(28.dp, shape = MaterialTheme.shapes.medium)
+                .border(10.dp, Color(0xFF26140B), shape = MaterialTheme.shapes.medium)
+                .background(Color(0xFF8D6E63))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
@@ -79,11 +79,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
-                            // Палитра деревянных клеток высокой четкости
                             val cellColor = when {
-                                isSelected -> Color(0xFFFFEE58) // Золотая подсветка активной шашки
-                                (row + col) % 2 != 0 -> Color(0xFF1B5E20) // Глубокий лесной зеленый
-                                else -> Color(0xFFF5F5F5) // Светлый полированный дуб
+                                isSelected -> Color(0xFFFFD54F) // Теплое золотое выделение
+                                (row + col) % 2 != 0 -> Color(0xFF1F4E27) // Глубокий изумрудный цвет темных клеток
+                                else -> Color(0xFFF0E6D2) // Текстурный слоновая кость / светлое дерево
                             }
 
                             Box(
@@ -110,39 +109,39 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 fun CheckerPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
     
-    // Эффект многослойного глянцевого покрытия
+    // Премиальный металлический/глянцевый градиент
     val brush = if (isWhite) {
         Brush.radialGradient(
-            colors = listOf(Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E))
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFDCDCDC), Color(0xFF9E9E9E))
         )
     } else {
         Brush.radialGradient(
-            colors = listOf(Color(0xFF424242), Color(0xFF212121), Color(0xFF000000))
+            colors = listOf(Color(0xFF484848), Color(0xFF222222), Color(0xFF000000))
         )
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize(0.82f)
-            .shadow(10.dp, CircleShape)
+            .shadow(12.dp, CircleShape)
             .background(brush, shape = CircleShape)
             .border(
                 width = 3.dp,
-                color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF272727),
+                color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF1A1A1A),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
     ) {
         if (piece.type == PieceType.KING) {
-            // Корона с золотым сиянием для дамок
+            // Корона с богатым золотым сиянием
             Box(
                 modifier = Modifier
                     .fillMaxSize(0.72f)
                     .background(
-                        Brush.radialGradient(listOf(Color(0xFFFFEE58), Color(0xFFFFA000))),
+                        Brush.radialGradient(listOf(Color(0xFFFFEE58), Color(0xFFFF8F00))),
                         shape = CircleShape
                     )
-                    .border(1.5.dp, Color(0xFFFF6F00), CircleShape),
+                    .border(2.dp, Color(0xFFFF6F00), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -151,13 +150,13 @@ fun CheckerPieceView(piece: CheckerPiece) {
                 )
             }
         } else {
-            // Внутреннее углубление (гравировка) на шашке
+            // Внутренняя двойная гравировка для идеальной детализации шашки
             Box(
                 modifier = Modifier
                     .fillMaxSize(0.55f)
                     .border(
                         width = 1.5.dp,
-                        color = if (isWhite) Color(0xFF90A4AE) else Color(0xFF616161),
+                        color = if (isWhite) Color(0xFF80CBC4) else Color(0xFF555555),
                         shape = CircleShape
                     )
             )
