@@ -16,121 +16,28 @@
 # limitations under the License.
 #
 
-##############################################################################
-##
-##  Gradle start up script for UN*X
-##
-##############################################################################
+DIRNAME=`dirname "$0"`
+PROGNAME=`basename "$0"`
+GREP_OPTIONS=""
 
-# Attempt to set APP_HOME
-# Resolve links: $0 may be a link
-PRG="$0"
-# Need this for relative symlinks.
-while [ -h "$PRG" ]; do
-    ls=`ls -ld "$PRG"`
-    link=`expr "$ls" : '.*-> \(.*\)$'`
-    if expr "$link" : '/.*' > /dev/null; then
-        PRG="$link"
-    else
-        PRG=`dirname "$PRG"`/"$link"
-    fi
-done
-SAVED="`pwd`"
-CDPATH=""
-cd "`dirname \"$PRG\"`/" >/dev/null
-APP_HOME="`pwd -P`"
-cd "$SAVED" >/dev/null
-
-APP_NAME="Gradle"
-APP_BASE_NAME=`basename "$0"`
-
-# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+app_home=`cd "$DIRNAME" && pwd`
 
 # Use the maximum available byte code version of the current JVM.
-# Needs to be explicitly enabled by setting $GRADLE_OPTS.
-# Notice: JVM specs differ per platform.
-JVM_OPTS_VERSION=1.8
-
-# Die with an error message
-die () {
-    echo
-    echo "$*"
-    echo
-    exit 1
-}
-
-# OS specific support. $var _must_ be set to true or false.
-cygwin=false
-msys=false
-darwin=false
-nonstop=false
-case "`uname`" in
-  CYGWIN* ) cygwin=true ;;
-  Darwin* ) darwin=true ;;
-  MINGW* ) msys=true ;;
-  NONSTOP* ) nonstop=true ;;
-esac
-
-CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-
-
-# Determine the Java command to use to start the JVM.
-if [ -n "$JAVA_HOME" ] ; then
-    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-        # IBM's JDK on AIX uses strange paths for the jre
-        JAVACMD="$JAVA_HOME/jre/sh/java"
-    else
-        JAVACMD="$JAVA_HOME/bin/java"
-    fi
-    if [ ! -x "$JAVACMD" ] ; then
-        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
-
-Please set the JAVA_HOME variable in your environment to match the
-location of your Java installation."
-    fi
+if [ -n "$JAVA_HOME" ]; then
+    JAVACMD="$JAVA_HOME/bin/java"
 else
     JAVACMD="java"
-    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-
-Please set the JAVA_HOME variable in your environment to match the
-location of your Java installation."
 fi
 
-# Increase the maximum file descriptors if we can.
-if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
-    MAX_FD_LIMIT=`ulimit -H -n`
-    if [ $? -eq 0 ] ; then
-        if [ "$MAX_FD" = "maximum" -o "$MAX_FD" = "max" ] ; then
-            MAX_FD="$MAX_FD_LIMIT"
-        fi
-        ulimit -n $MAX_FD
-        if [ $? -ne 0 ] ; then
-            echo "Warning: Could not set maximum file descriptor limit: $MAX_FD"
-        fi
-    fi
+if [ ! -x "$JAVACMD" ] ; then
+    echo "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
+    exit 1
 fi
 
-# For Darwin, add OPTIONS to JVM_OPTS
-if [ "$darwin" = "true" ] ; then
-    JVM_OPTS="$JVM_OPTS -Xdock:name=$APP_NAME -Xdock:icon=$APP_HOME/media/gradle.icns"
-fi
+CLASSPATH=$app_home/gradle/wrapper/gradle-wrapper.jar
 
-# For Cygwin or MSYS, switch paths to Windows format before running java
-if [ "$cygwin" = "true" -o "$msys" = "true" ] ; then
-    APP_HOME=`cygpath --path --windows "$APP_HOME"`
-    CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
-    JAVACMD=`cygpath --path --windows "$JAVACMD"`
-fi
-
-# Escape application args
-for arg in "$@" ; do
-    CHECK=`echo "$arg" | grep "[[:space:]]"`
-    if [ -n "$CHECK" ] ; then
-        eval "APP_ARGS=\"\$APP_ARGS \\\"$arg\\\"\""
-    else
-        eval "APP_ARGS=\"\$APP_ARGS $arg\""
-    fi
-done
-
-exec "$JAVACMD" $DEFAULT_JVM_OPTS$JAVA_OPTS $GRADLE_OPTS "-Dorg.gradle.appname=$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+exec "$JAVACMD" \
+    "-Xmx64m" \
+    "-Xms64m" \
+    -classpath "$CLASSPATH" \
+    org.gradle.wrapper.GradleWrapperMain "$@"
