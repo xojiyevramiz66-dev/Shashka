@@ -17,5 +17,6 @@ data class CheckerPiece(
 
 data class Cell(
     val position: Position,
-    val piece: CheckerPiece? = null
+    val piece: CheckerPiece? = null,
+    val isHighlighted: Boolean = false
 )
