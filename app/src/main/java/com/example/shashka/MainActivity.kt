@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF1E1E1E)
+                color = Color(0xFF121212) // Глубокий темно-серый фон
             ) {
                 CheckersScreen()
             }
@@ -47,24 +47,29 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Статусная панель хода
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
-            modifier = Modifier.padding(bottom = 24.dp)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1F1F1F)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            modifier = Modifier
+                .padding(bottom = 24.dp)
+                .border(1.dp, Color(0xFF333333), MaterialTheme.shapes.medium)
         ) {
             Text(
-                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход (Белые)" else "Ход ИИ (Черные)...",
-                color = if (currentPlayer == PlayerColor.WHITE) Color(0xFF81C784) else Color(0xFFE57373),
-                fontSize = 20.sp,
+                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход (Белые)" else "Думает ИИ...",
+                color = if (currentPlayer == PlayerColor.WHITE) Color(0xFFA5D6A7) else Color(0xFFEF9A9A),
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                modifier = Modifier.padding(horizontal = 28.dp, vertical = 14.dp)
             )
         }
 
+        // Игровая доска с качественной рамкой
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .shadow(12.dp, shape = MaterialTheme.shapes.medium)
-                .border(4.dp, Color(0xFF4E342E), shape = MaterialTheme.shapes.medium)
+                .shadow(16.dp, shape = MaterialTheme.shapes.medium)
+                .border(6.dp, Color(0xFF3E2723), shape = MaterialTheme.shapes.medium)
                 .background(Color(0xFFD7CCC8))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -74,17 +79,18 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
+                            // Определяем цвет клетки
+                            val cellColor = when {
+                                isSelected -> Color(0xFFFFEE58) // Золотая подсветка выбранной шашки
+                                (row + col) % 2 != 0 -> Color(0xFF2E7D32) // Насыщенный благородный зеленый
+                                else -> Color(0xFFEFEBE9) // Светлая клетка дерева
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .background(
-                                        when {
-                                            isSelected -> Color(0xFFFFF176)
-                                            (row + col) % 2 != 0 -> Color(0xFF388E3C)
-                                            else -> Color(0xFFE8F5E9)
-                                        }
-                                    )
+                                    .background(cellColor)
                                     .clickable { viewModel.onCellClicked(cell.position) },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -104,40 +110,54 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 fun CheckerPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
     
+    // Роскошные радиальные градиенты для максимального объема
     val brush = if (isWhite) {
         Brush.radialGradient(
-            colors = listOf(Color(0xFFFFFFFF), Color(0xFFB0BEC5))
+            colors = listOf(Color(0xFFFFFFFF), Color(0xFFCFD8DC), Color(0xFF90A4AE))
         )
     } else {
         Brush.radialGradient(
-            colors = listOf(Color(0xFF616161), Color(0xFF212121))
+            colors = listOf(Color(0xFF546E7A), Color(0xFF263238), Color(0xFF000000))
         )
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize(0.82f)
-            .shadow(6.dp, CircleShape)
+            .shadow(8.dp, CircleShape)
             .background(brush, shape = CircleShape)
             .border(
-                width = 2.dp,
-                color = if (isWhite) Color(0xFF90A4AE) else Color(0xFF000000),
+                width = 2.5.dp,
+                color = if (isWhite) Color(0xFFECEFF1) else Color(0xFF111111),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
     ) {
         if (piece.type == PieceType.KING) {
-            Text(
-                text = "👑",
-                fontSize = 22.sp
-            )
-        } else {
+            // Корона для дамки с эффектом золота
             Box(
                 modifier = Modifier
-                    .fillMaxSize(0.6f)
+                    .fillMaxSize(0.7f)
+                    .background(
+                        Brush.radialGradient(listOf(Color(0xFFFFD54F), Color(0xFFFFA000))),
+                        shape = CircleShape
+                    )
+                    .border(1.5.dp, Color(0xFFFF8F00), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "👑",
+                    fontSize = 20.sp
+                )
+            }
+        } else {
+            // Внутреннее тиснение для обычной шашки
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(0.55f)
                     .border(
                         width = 1.5.dp,
-                        color = if (isWhite) Color(0xFFCFD8DC) else Color(0xFF424242),
+                        color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF37474F),
                         shape = CircleShape
                     )
             )
