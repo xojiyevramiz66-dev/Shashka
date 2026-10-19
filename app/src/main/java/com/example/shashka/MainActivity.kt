@@ -74,6 +74,16 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
 
+    val prefs = remember { context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE) }
+
+    // Загружаем сохраненную сложность при старте
+    LaunchedEffect(Unit) {
+        val savedDifficulty = prefs.getString("ai_difficulty", "Непобедимый")
+        if (savedDifficulty != null) {
+            viewModel.aiDifficulty = savedDifficulty
+        }
+    }
+
     var showSettingsDialog by remember { mutableStateOf(false) }
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
@@ -292,6 +302,8 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                 Button(
                                     onClick = { 
                                         viewModel.aiDifficulty = level
+                                        // Сохраняем сложность в память устройства
+                                        prefs.edit().putString("ai_difficulty", level).apply()
                                         triggerVibration(context, vibrationEnabled)
                                     },
                                     colors = ButtonDefaults.buttonColors(
