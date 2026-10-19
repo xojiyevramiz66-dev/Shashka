@@ -72,7 +72,7 @@ class CheckersViewModel : ViewModel() {
 
                 executeMoveWithCapture(currentSelected, pos)
 
-                // Проверяем, может ли эта же шашка продолжить бить (серия из 2-3 ходов)
+                // Проверяем, может ли эта же шашка продолжить бить (серия из 2-3 прыжков)
                 if (isCapture && movedPiece != null && hasCaptureMovesForPiece(boardState, pos)) {
                     // Продолжаем ход той же шашкой
                     selectedPosition = pos
@@ -196,17 +196,17 @@ class CheckersViewModel : ViewModel() {
 
         if (kotlin.math.abs(rowDiff) != kotlin.math.abs(colDiff)) return false
 
-        // Если идет серия ударов, разрешены только ходы с взятием
-        if (mandatoryCapturingPiece != null && mandatoryCapturingPiece == from) {
-            val captured = findCapturedPiece(board, from, to)
-            return captured != null && board[captured.row][captured.col].piece?.color != piece.color
-        }
+        // Если идет серия ударов, ходить может только эта шашка
+        if (mandatoryCapturingPiece != null && mandatoryCapturingPiece != from) return false
 
         if (piece.type == PieceType.PAWN) {
             val forwardDir = if (piece.color == PlayerColor.WHITE) -1 else 1
+            // Обычный ход на 1 клетку (только если серия не в процессе)
             if (steps == 1 && mandatoryCapturingPiece == null) {
                 return rowDiff == forwardDir
-            } else if (steps == 2 || steps > 1) {
+            } 
+            // Взятие всегда строго на 2 клетки (даже в серии из 2-3 прыжков каждый отдельный удар делается на 2 клетки через шашку)
+            else if (steps == 2) {
                 val captured = findCapturedPiece(board, from, to)
                 return captured != null && board[captured.row][captured.col].piece?.color != piece.color
             }
