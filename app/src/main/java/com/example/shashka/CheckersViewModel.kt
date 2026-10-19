@@ -38,7 +38,7 @@ class CheckersViewModel : ViewModel() {
     }
 
     fun onCellClicked(pos: Position) {
-        if (currentPlayer != PlayerColor.WHITE) return // Ход игрока только за белых
+        if (currentPlayer != PlayerColor.WHITE) return
 
         val currentSelected = selectedPosition
         val cell = boardState[pos.row][pos.col]
@@ -52,13 +52,12 @@ class CheckersViewModel : ViewModel() {
             if (currentSelected == pos) {
                 selectedPosition = null
                 clearHighlights()
-            } else if (isValidMove(currentSelected, pos)) {
+            } else if (isValidMoveOnBoard(boardState, currentSelected, pos)) {
                 saveStateToHistory()
                 executeMoveWithCapture(currentSelected, pos)
                 selectedPosition = null
                 clearHighlights()
 
-                // Смена хода на ИИ (черные)
                 currentPlayer = PlayerColor.BLACK
                 makeAIMove()
             } else if (cell.piece?.color == currentPlayer) {
@@ -90,7 +89,7 @@ class CheckersViewModel : ViewModel() {
         val newBoard = Array(8) { r ->
             Array(8) { c ->
                 val fromCell = boardState[r][c]
-                val isValid = isValidMove(pos, Position(r, c))
+                val isValid = isValidMoveOnBoard(boardState, pos, Position(r, c))
                 fromCell.copy(isHighlighted = isValid)
             }
         }
@@ -106,53 +105,67 @@ class CheckersViewModel : ViewModel() {
         boardState = newBoard
     }
 
-    private fun isValidMove(from: Position, to: Position): Boolean {
-        val targetCell = boardState[to.row][to.col]
-        if (targetCell.piece != null) return false
-
-        val piece = boardState[from.row][from.col].piece ?: return false
+    // Универсальная проверка возможности взятия фигуры по пути
+    private fun findCapturedPiece(board: Array<Array<Cell>>, from: Position, to: Position): Position? {
         val rowDiff = to.row - from.row
-        val colDiff = kotlin.math.abs(to.col - from.col)
+        val colDiff = to.col - from.col
+        if (kotlin.math.abs(rowDiff) != kotlin.math.abs(colDiff)) return null
+
+        val rowStep = if (rowDiff > 0) 1 else -1
+        val colStep = if (colDiff > 0) 1 else -1
+
+        var r = from.row + rowStep
+        var c = from.col + colStep
+        var capturedPos: Position? = null
+        var opponentCount = 0
+
+        while (r != to.row && c != to.col) {
+            val p = board[r][c].piece
+            if (p != null) {
+                opponentCount++
+                capturedPos = Position(r, c)
+            }
+            r += rowStep
+            c += colStep
+        }
+        return if (opponentCount == 1) capturedPos else null
+    }
+
+    private fun isValidMoveOnBoard(board: Array<Array<Cell>>, from: Position, to: Position): Boolean {
+        if (board[to.row][to.col].piece != null) return false
+        val piece = board[from.row][from.col].piece ?: return false
+        val rowDiff = to.row - from.row
+        val colDiff = to.col - from.col
+        val steps = kotlin.math.abs(rowDiff)
+
+        if (kotlin.math.abs(rowDiff) != kotlin.math.abs(colDiff)) return false
 
         if (piece.type == PieceType.PAWN) {
             val forwardDir = if (piece.color == PlayerColor.WHITE) -1 else 1
-            // Обычный ход на 1 клетку вперед по диагонали
-            if (rowDiff == forwardDir && colDiff == 1) return true
-
-            // Рубка через шашку
-            if (rowDiff == forwardDir * 2 && colDiff == 2) {
-                val middleRow = (from.row + to.row) / 2
-                val middleCol = (from.col + to.col) / 2
-                val middlePiece = boardState[middleRow][middleCol].piece
-                if (middlePiece != null && middlePiece.color != piece.color) return true
-            }
-            // Шашка назад при рубке
-            if (rowDiff == -forwardDir * 2 && colDiff == 2) {
-                val middleRow = (from.row + to.row) / 2
-                val middleCol = (from.col + to.col) / 2
-                val middlePiece = boardState[middleRow][middleCol].piece
-                if (middlePiece != null && middlePiece.color != piece.color) return true
+            if (steps == 1) {
+                return rowDiff == forwardDir
+            } else if (steps == 2) {
+                val captured = findCapturedPiece(board, from, to)
+                return captured != null && board[captured.row][captured.col].piece?.color != piece.color
             }
         } else if (piece.type == PieceType.KING) {
-            // Ходы и рубка для дамки
-            if (kotlin.math.abs(rowDiff) == kotlin.math.abs(colDiff)) {
-                val rowStep = if (to.row > from.row) 1 else -1
-                val colStep = if (to.col > from.col) 1 else -1
-                var r = from.row + rowStep
-                var c = from.col + colStep
-                var opponentCount = 0
+            val captured = findCapturedPiece(board, from, to)
+            val rowStep = if (rowDiff > 0) 1 else -1
+            val colStep = if (colDiff > 0) 1 else -1
+            var r = from.row + rowStep
+            var c = from.col + colStep
+            var blocked = false
 
-                while (r != to.row && c != to.col) {
-                    val p = boardState[r][c].piece
-                    if (p != null) {
-                        if (p.color == piece.color) return false
-                        opponentCount++
-                    }
-                    r += rowStep
-                    c += colStep
+            while (r != to.row && c != to.col) {
+                val p = board[r][c].piece
+                if (p != null && (captured == null || r != captured.row || c != captured.col)) {
+                    blocked = true
+                    break
                 }
-                return opponentCount <= 1
+                r += rowStep
+                c += colStep
             }
+            return !blocked
         }
         return false
     }
@@ -167,11 +180,10 @@ class CheckersViewModel : ViewModel() {
         var piece = newBoard[from.row][from.col].piece
         newBoard[from.row][from.col] = newBoard[from.row][from.col].copy(piece = null)
 
-        // Если это была рубка, удаляем сбитую фигуру
-        if (kotlin.math.abs(to.row - from.row) == 2 && kotlin.math.abs(to.col - from.col) == 2) {
-            val middleRow = (from.row + to.row) / 2
-            val middleCol = (from.col + to.col) / 2
-            newBoard[middleRow][middleCol] = newBoard[middleRow][middleCol].copy(piece = null)
+        // Удаляем сбитую фигуру (если таковая была на пути)
+        val capturedPos = findCapturedPiece(newBoard, from, to)
+        if (capturedPos != null) {
+            newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
         }
 
         // Превращение в дамку
@@ -291,11 +303,10 @@ class CheckersViewModel : ViewModel() {
                 val piece = board[r][c].piece
                 if (piece?.color == color) {
                     val from = Position(r, c)
-                    // Проверяем все возможные целевые клетки на доске
                     for (tr in 0..7) {
                         for (tc in 0..7) {
                             val to = Position(tr, tc)
-                            if (isValidMoveForSimulatedBoard(board, from, to)) {
+                            if (isValidMoveOnBoard(board, from, to)) {
                                 list.add(Pair(from, to))
                             }
                         }
@@ -304,33 +315,6 @@ class CheckersViewModel : ViewModel() {
             }
         }
         return list
-    }
-
-    private fun isValidMoveForSimulatedBoard(
-        board: Array<Array<Cell>>,
-        from: Position,
-        to: Position
-    ): Boolean {
-        val targetCell = board[to.row][to.col]
-        if (targetCell.piece != null) return false
-
-        val piece = board[from.row][from.col].piece ?: return false
-        val rowDiff = to.row - from.row
-        val colDiff = kotlin.math.abs(to.col - from.col)
-
-        if (piece.type == PieceType.PAWN) {
-            val forwardDir = if (piece.color == PlayerColor.WHITE) -1 else 1
-            if (rowDiff == forwardDir && colDiff == 1) return true
-            if (kotlin.math.abs(rowDiff) == 2 && colDiff == 2) {
-                val middleRow = (from.row + to.row) / 2
-                val middleCol = (from.col + to.col) / 2
-                val middlePiece = board[middleRow][middleCol].piece
-                if (middlePiece != null && middlePiece.color != piece.color) return true
-            }
-        } else if (piece.type == PieceType.KING) {
-            if (kotlin.math.abs(rowDiff) == kotlin.math.abs(colDiff)) return true
-        }
-        return false
     }
 
     private fun simulateMove(
@@ -346,10 +330,9 @@ class CheckersViewModel : ViewModel() {
         var piece = newBoard[from.row][from.col].piece
         newBoard[from.row][from.col] = newBoard[from.row][from.col].copy(piece = null)
 
-        if (kotlin.math.abs(to.row - from.row) == 2 && kotlin.math.abs(to.col - from.col) == 2) {
-            val middleRow = (from.row + to.row) / 2
-            val middleCol = (from.col + to.col) / 2
-            newBoard[middleRow][middleCol] = newBoard[middleRow][middleCol].copy(piece = null)
+        val capturedPos = findCapturedPiece(newBoard, from, to)
+        if (capturedPos != null) {
+            newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
         }
 
         if (piece != null) {
