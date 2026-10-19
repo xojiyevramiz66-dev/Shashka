@@ -78,6 +78,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
+    var currentDifficulty by remember { mutableStateOf(viewModel.aiDifficulty) }
 
     Column(
         modifier = Modifier
@@ -188,6 +189,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val isDarkCell = (row + col) % 2 != 0
                             val cellBackground = when {
                                 isSelected -> Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFE5A912)))
+                                cell.isHighlighted -> Brush.linearGradient(listOf(Color(0xFF81D4FA), Color(0xFF29B6F6)))
                                 isDarkCell -> Brush.verticalGradient(listOf(Color(0xFF482D1B), Color(0xFF2C190D)))
                                 else -> Brush.verticalGradient(listOf(Color(0xFFF2E6D8), Color(0xFFD6C0A8)))
                             }
@@ -290,16 +292,17 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             listOf("Лёгкий", "Средний", "Непобедимый").forEach { level ->
                                 Button(
                                     onClick = { 
+                                        currentDifficulty = level
                                         viewModel.aiDifficulty = level
                                         triggerVibration(context, vibrationEnabled)
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (viewModel.aiDifficulty == level) Color(0xFFF4C430) else Color(0xFF2C2C2C),
-                                        contentColor = if (viewModel.aiDifficulty == level) Color(0xFF141414) else Color(0xFFDDDDDD)
+                                        containerColor = if (currentDifficulty == level) Color(0xFFF4C430) else Color(0xFF2C2C2C),
+                                        contentColor = if (currentDifficulty == level) Color(0xFF141414) else Color(0xFFDDDDDD)
                                     ),
                                     modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
                                 ) {
-                                    Text(text = level, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(text = level, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
