@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -26,7 +27,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF070504) // Студийный черный фон 4K-уровня
+                color = Color(0xFF140C08) // Глубокий фон деревянного стола
             ) {
                 CheckersScreen()
             }
@@ -43,34 +44,34 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Статусная панель хода в ультра-высоком качестве
+        // Статусная плашка в стиле резного дерева
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A100B)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1810)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
             modifier = Modifier
-                .padding(bottom = 28.dp)
-                .border(2.dp, Color(0xFF5D4037), MaterialTheme.shapes.medium)
+                .padding(bottom = 20.dp)
+                .border(2.dp, Color(0xFF5D3A24), MaterialTheme.shapes.medium)
         ) {
             Text(
                 text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход (Белые)" else "Ход ИИ...",
-                color = if (currentPlayer == PlayerColor.WHITE) Color(0xFFA5D6A7) else Color(0xFFEF9A9A),
-                fontSize = 20.sp,
+                color = if (currentPlayer == PlayerColor.WHITE) Color(0xFFFFF8E7) else Color(0xFFFFCC80),
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 40.dp, vertical = 16.dp)
+                modifier = Modifier.padding(horizontal = 36.dp, vertical = 12.dp)
             )
         }
 
-        // Премиальная доска с глубоким багетом под дерево
+        // Премиальная деревянная доска
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .shadow(36.dp, shape = MaterialTheme.shapes.medium)
-                .border(12.dp, Color(0xFF211009), shape = MaterialTheme.shapes.medium)
-                .background(Color(0xFF6D4C41))
+                .shadow(28.dp, shape = MaterialTheme.shapes.medium)
+                .border(10.dp, Color(0xFF3D2314), shape = MaterialTheme.shapes.medium) // Деревянная рамка
+                .background(Color(0xFF8D5B3A))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
@@ -79,10 +80,11 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
+                            // Классическая цветовая гамма резной деревянной доски
                             val cellColor = when {
-                                isSelected -> Color(0xFFFFD54F) // Насыщенное золото при выборе
-                                (row + col) % 2 != 0 -> Color(0xFF1B4D2E) // Благородный изумрудный цвет сукна
-                                else -> Color(0xFFF5F1E9) // Текстурный слоновая кость
+                                isSelected -> Color(0xFFFFB300) // Янтарный подсвечник для хода
+                                (row + col) % 2 != 0 -> Color(0xFFA04B28) // Насыщенное красное дерево
+                                else -> Color(0xFFE8D3B0) // Светлая береза / сосна
                             }
 
                             Box(
@@ -94,7 +96,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 cell.piece?.let { piece ->
-                                    UltraHDCheckerPieceView(piece = piece)
+                                    WoodCheckerPieceView(piece = piece)
                                 }
                             }
                         }
@@ -106,71 +108,95 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 }
 
 @Composable
-fun UltraHDCheckerPieceView(piece: CheckerPiece) {
+fun WoodCheckerPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
-    
-    // Плавные радиальные градиенты для объемного 4K-эффекта
-    val brush = if (isWhite) {
+
+    // Градиенты объёма для светлых и тёмно-коричневых деревянных шашек
+    val outerGradient = if (isWhite) {
         Brush.radialGradient(
             colors = listOf(
-                Color(0xFFFFFFFF), 
-                Color(0xFFF5F5F5), 
-                Color(0xFFCFD8DC), 
-                Color(0xFF90A4AE)
+                Color(0xFFFFFFFF),
+                Color(0xFFF7EBD2),
+                Color(0xFFDCC196),
+                Color(0xFFA88457)
             )
         )
     } else {
         Brush.radialGradient(
             colors = listOf(
-                Color(0xFF4A4A4A), 
-                Color(0xFF2C2C2C), 
-                Color(0xFF121212), 
-                Color(0xFF000000)
+                Color(0xFFD66D3B),
+                Color(0xFFA8451E),
+                Color(0xFF6B260C),
+                Color(0xFF3B1103)
             )
         )
     }
 
+    val borderColor = if (isWhite) Color(0xFF8C6B3F) else Color(0xFF260A02)
+
+    // Внешняя фишка с объёмной тенью
     Box(
         modifier = Modifier
-            .fillMaxSize(0.85f) // Крупные и четкие шашки
-            .shadow(8.dp, CircleShape)
-            .background(brush, shape = CircleShape)
-            .border(
-                width = 3.dp,
-                // Идеально контрастная окантовка, видимая на любых клетках
-                color = if (isWhite) Color(0xFF78909C) else Color(0xFFB0BEC5),
-                shape = CircleShape
-            ),
+            .fillMaxSize(0.84f)
+            .shadow(6.dp, CircleShape)
+            .background(outerGradient, shape = CircleShape)
+            .border(2.dp, borderColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        if (piece.type == PieceType.KING) {
-            // Роскошная корона с золотым сиянием для дамок
+        // Первый резной концентрический круг (фаска)
+        Box(
+            modifier = Modifier
+                .fillMaxSize(0.72f)
+                .border(
+                    width = 2.dp,
+                    color = if (isWhite) Color(0xFFFFF3DB) else Color(0xFFE58250),
+                    shape = CircleShape
+                )
+                .border(
+                    width = 3.5.dp,
+                    color = if (isWhite) Color(0xFFB8966B) else Color(0xFF521C0B),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Второй внутренний кольцевой узор
             Box(
                 modifier = Modifier
-                    .fillMaxSize(0.7f)
+                    .fillMaxSize(0.52f)
                     .background(
-                        Brush.radialGradient(listOf(Color(0xFFFFEE58), Color(0xFFFF8F00))),
+                        brush = if (isWhite) {
+                            Brush.radialGradient(listOf(Color(0xFFFFFBF2), Color(0xFFD1B288)))
+                        } else {
+                            Brush.radialGradient(listOf(Color(0xFFE87E48), Color(0xFF591E0A)))
+                        },
                         shape = CircleShape
                     )
-                    .border(2.dp, Color(0xFFFF6F00), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "👑",
-                    fontSize = 22.sp
-                )
-            }
-        } else {
-            // Двойная внутренняя гравировка высокой четкости
-            Box(
-                modifier = Modifier
-                    .fillMaxSize(0.58f)
                     .border(
                         width = 1.5.dp,
-                        color = if (isWhite) Color(0xFFB0BEC5) else Color(0xFF616161),
+                        color = if (isWhite) Color(0xFF9E7A4C) else Color(0xFF330F04),
                         shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (piece.type == PieceType.KING) {
+                    // Золотая роспись короны для дамок
+                    Text(
+                        text = "👑",
+                        fontSize = 18.sp
                     )
-            )
+                } else {
+                    // Центр резной фишки (самый внутренний кружок)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(0.45f)
+                            .border(
+                                width = 1.dp,
+                                color = if (isWhite) Color(0xFFFFF8EA) else Color(0xFFFFA270),
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
         }
     }
 }
