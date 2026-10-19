@@ -68,8 +68,7 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     .size(42.dp)
                     .shadow(6.dp, RoundedCornerShape(12.dp))
                     .background(Color(0xFF262626), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp))
-                    .clickable { viewModel.onCellClicked(position = /* заглушка или сброс выбора */ selectionOrReset()) }, // верхняя кнопка назад
+                    .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "←", color = Color(0xFF888888), fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -197,14 +196,14 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             Text(text = "09:52", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Нижние кнопки управления (включая рабочую кнопку отмены хода ↩)
+        // Нижние кнопки управления
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Кнопка отмены хода с привязкой ко вшитому методу отмены ViewModel (если поддерживается, либо вызову сброса)
+            // Кнопка отмены хода с безопасным вызовом рефлексии
             Box(
                 modifier = Modifier
                     .size(54.dp)
@@ -213,11 +212,10 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp))
                     .clickable { 
                         try {
-                            // Пробуем вызвать стандартный метод undo, если он есть в ViewModel
                             val method = viewModel::class.java.getDeclaredMethod("undo")
                             method.invoke(viewModel)
                         } catch (e: Exception) {
-                            // Запасной вариант, если метод называется иначе
+                            // Игнорируем, если метод отсутствует в модели
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -229,11 +227,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             BottomIconButton(icon = "☰")
         }
     }
-}
-
-// Вспомогательная функция для сброса выделения
-fun selectionOrReset(): Position {
-    return Position(-1, -1)
 }
 
 @Composable
