@@ -3,6 +3,7 @@ package com.example.shashka
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,8 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,10 +29,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Точный цвет фона из палитры референса (#1A1A1A)
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF1A1A1A)
+                color = Color(0xFF141414) // Точный цвет фона #1A1A1A / #141414
             ) {
                 CheckersScreen()
             }
@@ -45,83 +48,94 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Верхняя панель (Заголовок / Индикатор хода)
+        // Верхняя панель управления
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp),
+                .padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Кнопка возврата назад (стилизованная)
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .shadow(4.dp, RoundedCornerShape(12.dp))
-                    .background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFF444444), RoundedCornerShape(12.dp)),
+                    .size(42.dp)
+                    .shadow(6.dp, RoundedCornerShape(12.dp))
+                    .background(Color(0xFF262626), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "←", color = Color(0xFF555555), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = "←", color = Color(0xFF888888), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
             Text(
-                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход" else "Ход соперника",
-                color = Color(0xFFE8DCC6),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход" else "Ход противника",
+                color = Color(0xFFF5F5F5),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
             )
 
-            // Кнопка настроек
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .shadow(4.dp, RoundedCornerShape(12.dp))
-                    .background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFF444444), RoundedCornerShape(12.dp)),
+                    .size(42.dp)
+                    .shadow(6.dp, RoundedCornerShape(12.dp))
+                    .background(Color(0xFF262626), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "⚙️", fontSize = 18.sp)
+                Text(text = "⚙️", fontSize = 16.sp)
             }
         }
 
-        // Профиль ИИ / Соперника сверху
+        // Профиль противника сверху
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0xFF111111), CircleShape)
-                        .border(1.5.dp, Color(0xFF444444), CircleShape),
+                        .size(38.dp)
+                        .background(Color(0xFF1E1E1E), CircleShape)
+                        .border(2.dp, Color(0xFF3A3A3A), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Миниатюра черной фишки
-                    Box(modifier = Modifier.size(20.dp).background(Color(0xFF1A1A1A), CircleShape).border(1.dp, Color(0xFF444444), CircleShape))
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(
+                                Brush.radialGradient(listOf(Color(0xFF4A4A4A), Color(0xFF111111))),
+                                CircleShape
+                            )
+                            .border(1.dp, Color(0xFF666666), CircleShape)
+                    )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Противник", color = Color(0xFF555555), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(text = "Противник", color = Color(0xFF888888), fontSize = 15.sp)
             }
-            Text(text = "09:45", color = Color(0xFF555555), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Игровая доска в стиле макета (Дерево #3E2F1F с текстурной окантовкой)
+        // Реалистичная деревянная доска под макет
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .shadow(24.dp, RoundedCornerShape(16.dp))
-                .border(8.dp, Color(0xFF3E2F1F), RoundedCornerShape(16.dp))
-                .background(Color(0xFF3E2F1F))
+                .shadow(20.dp, RoundedCornerShape(12.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF4E3621), Color(0xFF2B1A0E))
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .border(12.dp, Color(0xFF3B2414), RoundedCornerShape(12.dp))
+                .padding(2.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 for (row in 0..7) {
@@ -130,24 +144,23 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                             val cell = board[row][col]
                             val isSelected = selected?.row == row && selected?.col == col
                             
-                            // Проверяем, является ли клетка возможным ходом для подсветки
-                            // (в будущем для расширения, пока подсвечиваем выбранную желтым)
-                            val cellColor = when {
-                                isSelected -> Color(0xFFF4C430) // Золотой цвет выбора из палитры
-                                (row + col) % 2 != 0 -> Color(0xFF3E2F1F) // Темное дерево
-                                else -> Color(0xFFE8DCC6) // Светлые клетки (слоновая кость / бежевый)
+                            val isDarkCell = (row + col) % 2 != 0
+                            val cellBackground = when {
+                                isSelected -> Brush.linearGradient(listOf(Color(0xFFF4C430), Color(0xFFD4A017)))
+                                isDarkCell -> Brush.verticalGradient(listOf(Color(0xFF4A2F1B), Color(0xFF362010)))
+                                else -> Brush.verticalGradient(listOf(Color(0xFFEADBCE), Color(0xFFCBB6A4)))
                             }
 
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .background(cellColor)
+                                    .background(cellBackground)
                                     .clickable { viewModel.onCellClicked(cell.position) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 cell.piece?.let { piece ->
-                                    ReferenceCheckerPieceView(piece = piece)
+                                    Realistic3DPieceView(piece = piece)
                                 }
                             }
                         }
@@ -160,143 +173,183 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0xFFE8DCC6), CircleShape)
-                        .border(1.5.dp, Color(0xFFF4C430), CircleShape),
+                        .size(38.dp)
+                        .background(Color(0xFFEADBCE), CircleShape)
+                        .border(2.dp, Color(0xFFF4C430), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "👑", fontSize = 14.sp)
+                    Text(text = "👑", fontSize = 16.sp)
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Вы", color = Color(0xFFE8DCC6), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Вы", color = Color(0xFFEEEEEE), fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
-            Text(text = "09:52", color = Color(0xFF555555), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(text = "09:52", color = Color(0xFF666666), fontSize = 15.sp)
         }
 
-        // Нижняя панель с кнопками управления (Подсказка, Назад, Меню)
+        // Нижние кнопки
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
+                .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ActionButton(icon = "↩")
-            ActionButton(icon = "💡")
-            ActionButton(icon = "☰")
+            BottomIconButton(icon = "↩")
+            BottomIconButton(icon = "💡")
+            BottomIconButton(icon = "☰")
         }
     }
 }
 
 @Composable
-fun ActionButton(icon: String) {
+fun BottomIconButton(icon: String) {
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(54.dp)
             .shadow(6.dp, RoundedCornerShape(16.dp))
-            .background(Color(0xFF252525), RoundedCornerShape(16.dp))
+            .background(Color(0xFF242424), RoundedCornerShape(16.dp))
             .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = icon, color = Color(0xFFE8DCC6), fontSize = 22.sp)
+        Text(text = icon, color = Color(0xFFDDDDDD), fontSize = 20.sp)
     }
 }
 
 @Composable
-fun ReferenceCheckerPieceView(piece: CheckerPiece) {
+fun Realistic3DPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
 
-    // Градиенты с фасками точь-в-точь как на вашем концепте
-    val outerBrush = if (isWhite) {
-        Brush.radialGradient(
-            colors = listOf(
-                Color(0xFFFFFFFF),
-                Color(0xFFF5EEDC),
-                Color(0xFFE8DCC6),
-                Color(0xFFB5A48B)
-            )
-        )
-    } else {
-        Brush.radialGradient(
-            colors = listOf(
-                Color(0xFF333333),
-                Color(0xFF222222),
-                Color(0xFF111111),
-                Color(0xFF000000)
-            )
-        )
-    }
-
-    val rimColor = if (isWhite) Color(0xFFC4B299) else Color(0xFF0A0A0A)
-
-    Box(
+    Canvas(
         modifier = Modifier
             .fillMaxSize(0.82f)
-            .shadow(8.dp, CircleShape)
-            .background(outerBrush, shape = CircleShape)
-            .border(2.5.dp, rimColor, CircleShape),
-        contentAlignment = Alignment.Center
     ) {
-        // Концентрическая фаска (первое кольцо)
-        Box(
-            modifier = Modifier
-                .fillMaxSize(0.72f)
-                .border(
-                    width = 2.dp,
-                    color = if (isWhite) Color(0xFFFFFFFF) else Color(0xFF444444),
-                    shape = CircleShape
-                )
-                .border(
-                    width = 3.dp,
-                    color = if (isWhite) Color(0xFFD4C2A8) else Color(0xFF1F1F1F),
-                    shape = CircleShape
+        val radius = size.minDimension / 2f
+        val center = Offset(size.width / 2f, size.height / 2f)
+
+        // 1. Падающая тень от шашки вниз-вправо
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.45f),
+            radius = radius * 0.98f,
+            center = center + Offset(radius * 0.08f, radius * 0.12f)
+        )
+
+        // 2. Внешнее тело шашки (Объемный фасочный градиент)
+        val bodyBrush = if (isWhite) {
+            Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFFFFF),
+                    Color(0xFFFAF3E6),
+                    Color(0xFFE2CEB1),
+                    Color(0xFF9E8462)
                 ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Внутренний круг/углубление фишки
-            Box(
-                modifier = Modifier
-                    .fillMaxSize(0.52f)
-                    .background(
-                        brush = if (isWhite) {
-                            Brush.radialGradient(listOf(Color(0xFFFFFDF9), Color(0xFFD6C5AC)))
-                        } else {
-                            Brush.radialGradient(listOf(Color(0xFF262626), Color(0xFF0D0D0D)))
-                        },
-                        shape = CircleShape
-                    )
-                    .border(
-                        width = 1.5.dp,
-                        color = if (isWhite) Color(0xFFB8A68C) else Color(0xFF050505),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (piece.type == PieceType.KING) {
-                    // Золотая корона для дамки (точно как на макете #F4C430)
-                    Text(
-                        text = "👑",
-                        fontSize = 18.sp
-                    )
-                } else {
-                    // Центральная выемка
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize(0.4f)
-                            .border(
-                                width = 1.dp,
-                                color = if (isWhite) Color(0xFFFFFFFF) else Color(0xFF555555),
-                                shape = CircleShape
-                            )
-                    )
-                }
+                center = center - Offset(radius * 0.25f, radius * 0.3f),
+                radius = radius * 1.3f
+            )
+        } else {
+            Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF555555),
+                    Color(0xFF2A2A2A),
+                    Color(0xFF141414),
+                    Color(0xFF000000)
+                ),
+                center = center - Offset(radius * 0.25f, radius * 0.3f),
+                radius = radius * 1.3f
+            )
+        }
+
+        drawCircle(
+            brush = bodyBrush,
+            radius = radius * 0.95f,
+            center = center
+        )
+
+        // Контур внешнего края
+        drawCircle(
+            color = if (isWhite) Color(0xFF8C7352) else Color(0xFF0D0D0D),
+            radius = radius * 0.95f,
+            center = center,
+            style = Stroke(width = radius * 0.04f)
+        )
+
+        // 3. Первое концентрическое углубление (фаска)
+        val outerRingRadius = radius * 0.72f
+        drawCircle(
+            color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF444444),
+            radius = outerRingRadius,
+            center = center,
+            style = Stroke(width = radius * 0.05f)
+        )
+        drawCircle(
+            color = if (isWhite) Color(0xFFA68B67) else Color(0xFF111111),
+            radius = outerRingRadius - radius * 0.04f,
+            center = center,
+            style = Stroke(width = radius * 0.04f)
+        )
+
+        // 4. Внутренняя чаша (углубление в центре)
+        val innerBrush = if (isWhite) {
+            Brush.radialGradient(
+                colors = listOf(Color(0xFFFFFFFF), Color(0xFFE4D2B8), Color(0xFFBCA17D)),
+                center = center - Offset(radius * 0.15f, radius * 0.2f),
+                radius = radius * 0.8f
+            )
+        } else {
+            Brush.radialGradient(
+                colors = listOf(Color(0xFF3A3A3A), Color(0xFF1A1A1A), Color(0xFF080808)),
+                center = center - Offset(radius * 0.15f, radius * 0.2f),
+                radius = radius * 0.8f
+            )
+        }
+
+        val innerRadius = radius * 0.52f
+        drawCircle(
+            brush = innerBrush,
+            radius = innerRadius,
+            center = center
+        )
+
+        drawCircle(
+            color = if (isWhite) Color(0xFF9E8360) else Color(0xFF050505),
+            radius = innerRadius,
+            center = center,
+            style = Stroke(width = radius * 0.04f)
+        )
+
+        // 5. Корона для дамки или центральный блик
+        if (piece.type == PieceType.KING) {
+            val crownColor = Color(0xFFF4C430)
+            val crownPath = Path().apply {
+                val w = radius * 0.45f
+                val h = radius * 0.35f
+                val left = center.x - w / 2f
+                val top = center.y - h / 2f
+
+                moveTo(left, top + h)
+                lineTo(left, top)
+                lineTo(left + w * 0.28f, top + h * 0.5f)
+                lineTo(left + w * 0.5f, top - h * 0.2f)
+                lineTo(left + w * 0.72f, top + h * 0.5f)
+                lineTo(left + w, top)
+                lineTo(left + w, top + h)
+                close()
             }
+            drawPath(path = crownPath, color = crownColor)
+            drawPath(path = crownPath, color = Color(0xFFB8860B), style = Stroke(width = 2f))
+        } else {
+            // Маленькое центральное кольцо
+            drawCircle(
+                color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.6f) else Color(0xFF555555),
+                radius = radius * 0.25f,
+                center = center,
+                style = Stroke(width = radius * 0.03f)
+            )
         }
     }
 }
