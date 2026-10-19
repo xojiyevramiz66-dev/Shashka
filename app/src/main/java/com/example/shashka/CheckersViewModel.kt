@@ -53,8 +53,8 @@ class CheckersViewModel : ViewModel() {
                     if (tryMakeMoveOrCapture(currentSelected, position)) {
                         currentPlayer = PlayerColor.BLACK
                         viewModelScope.launch {
-                            delay(500)
-                            makeAiMove()
+                            delay(400)
+                            makeSuperAiMove()
                         }
                     } else {
                         selectedPosition = null
@@ -71,111 +71,169 @@ class CheckersViewModel : ViewModel() {
     }
 
     private fun tryMakeMoveOrCapture(from: BoardPosition, to: BoardPosition): Boolean {
+        return executeMoveIfValid(boardState, from, to)?.let { newBoard ->
+            boardState = newBoard
+            selectedPosition = null
+            true
+        } ?: false
+    }
+
+    private fun executeMoveIfValid(board: Array<Array<Cell>>, from: BoardPosition, to: BoardPosition): Array<Array<Cell>>? {
         val rowDiff = to.row - from.row
         val colDiff = to.col - from.col
-        val movingPiece = boardState[from.row][from.col].piece ?: return false
+        val movingPiece = board[from.row][from.col].piece ?: return null
 
-        // Ход должен быть строго по диагонали
-        if (abs(rowDiff) != abs(colDiff)) return false
+        if (abs(rowDiff) != abs(colDiff)) return null
 
         val stepRow = if (rowDiff > 0) 1 else -1
         val stepCol = if (colDiff > 0) 1 else -1
         val steps = abs(rowDiff)
 
-        if (movingPiece.type == PieceType.KING) {
-            // Логика для Дамки (может ходить на много клеток и перепрыгивать через одну вражескую)
-            var enemyFound: BoardPosition? = null
-            var r = from.row + stepRow
-            var c = from.col + stepCol
+        var enemyPos: BoardPosition? = null
+        var r = from.row + stepRow
+        var c = from.col + stepCol
 
-            for (i in 1 until steps) {
-                val piece = boardState[r][c].piece
-                if (piece != null) {
-                    if (piece.color == movingPiece.color) return false // Своя шашка на пути
-                    if (enemyFound != null) return false // Две вражеские шашки подряд
-                    enemyFound = BoardPosition(r, c)
-                }
-                r += stepRow
-                c += stepCol
+        for (i in 1 until steps) {
+            val piece = board[r][c].piece
+            if (piece != null) {
+                if (piece.color == movingPiece.color) return null
+                if (enemyPos != null) return null
+                enemyPos = BoardPosition(r, c)
             }
-
-            if (boardState[to.row][to.col].piece != null) return false
-            executeMove(from, to, enemyFound)
-            return true
-
-        } else {
-            // Логика для обычной шашки
-            if (steps == 1) {
-                val isForward = if (movingPiece.color == PlayerColor.WHITE) rowDiff == -1 else rowDiff == 1
-                if (isForward && boardState[to.row][to.col].piece == null) {
-                    executeMove(from, to, null)
-                    return true
-                }
-            } else if (steps == 2) {
-                val midRow = from.row + stepRow
-                val midCol = from.col + stepCol
-                val enemyPiece = boardState[midRow][midCol].piece
-                if (enemyPiece != null && enemyPiece.color != movingPiece.color && boardState[to.row][to.col].piece == null) {
-                    executeMove(from, to, BoardPosition(midRow, midCol))
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private fun executeMove(from: BoardPosition, to: BoardPosition, removePosition: BoardPosition?) {
-        val newBoard = boardState.map { it.clone() }.toTypedArray()
-        var movingPiece = newBoard[from.row][from.col].piece
-
-        if (movingPiece != null) {
-            if (movingPiece.color == PlayerColor.WHITE && to.row == 0) {
-                movingPiece = movingPiece.copy(type = PieceType.KING)
-            } else if (movingPiece.color == PlayerColor.BLACK && to.row == 7) {
-                movingPiece = movingPiece.copy(type = PieceType.KING)
-            }
+            r += stepRow
+            c += stepCol
         }
 
-        newBoard[to.row][to.col] = newBoard[to.row][to.col].copy(piece = movingPiece)
+        if (board[to.row][to.col].piece != null) return null
+
+        if (movingPiece.type != PieceType.KING) {
+            if (steps > 2) return null
+            if (steps == 2 && enemyPos == null) return null
+            if (steps == 1 && enemyPos != null) return null
+            val isForward = if (movingPiece.color == PlayerColor.WHITE) rowDiff == -1 else rowDiff == 1
+            if (steps == 1 && !isForward) return null
+        }
+
+        val newBoard = board.map { it.clone() }.toTypedArray()
+        var finalPiece = movingPiece
+
+        if (finalPiece.color == PlayerColor.WHITE && to.row == 0) finalPiece = finalPiece.copy(type = PieceType.KING)
+        if (finalPiece.color == PlayerColor.BLACK && to.row == 7) finalPiece = finalPiece.copy(type = PieceType.KING)
+
+        newBoard[to.row][to.col] = newBoard[to.row][to.col].copy(piece = finalPiece)
         newBoard[from.row][from.col] = newBoard[from.row][from.col].copy(piece = null)
 
-        if (removePosition != null) {
-            newBoard[removePosition.row][removePosition.col] = newBoard[removePosition.row][removePosition.col].copy(piece = null)
+        if (enemyPos != null) {
+            newBoard[enemyPos.row][enemyPos.col] = newBoard[enemyPos.row][enemyPos.col].copy(piece = null)
         }
 
-        boardState = newBoard
-        selectedPosition = null
+        return newBoard
     }
 
-    private fun makeAiMove() {
-        if (currentPlayer != PlayerColor.BLACK) return
+    private fun getAllValidMoves(board: Array<Array<Cell>>, color: PlayerColor): List<Pair<BoardPosition, BoardPosition>> {
+        val moves = mutableListOf<Pair<BoardPosition, BoardPosition>>()
+        val captures = mutableListOf<Pair<BoardPosition, BoardPosition>>()
 
-        // Простой ИИ для примера делает базовый ход черных
-        val allMoves = mutableListOf<Triple<BoardPosition, BoardPosition, BoardPosition?>>()
         for (r in 0..7) {
             for (c in 0..7) {
-                val piece = boardState[r][c].piece
-                if (piece != null && piece.color == PlayerColor.BLACK) {
+                val piece = board[r][c].piece
+                if (piece != null && piece.color == color) {
                     val from = BoardPosition(r, c)
-                    val dirs = listOf(Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1))
-                    for (d in dirs) {
-                        val toR = r + d.first
-                        val toC = c + d.second
-                        if (toR in 0..7 && toC in 0..7 && boardState[toR][toC].piece == null) {
-                            if (piece.type == PieceType.KING || d.first == 1) {
-                                allMoves.add(Triple(from, BoardPosition(toR, toC), null))
+                    for (tr in 0..7) {
+                        for (tc in 0..7) {
+                            val to = BoardPosition(tr, tc)
+                            if (executeMoveIfValid(board, from, to) != null) {
+                                val rowDiff = abs(tr - r)
+                                if (rowDiff >= 2) {
+                                    captures.add(Pair(from, to))
+                                } else {
+                                    moves.add(Pair(from, to))
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        // В шашках бой обязателен, если есть взятие
+        return if (captures.isNotEmpty()) captures else moves
+    }
 
+    // Сверхмощный ИИ с оценкой позиции
+    private fun makeSuperAiMove() {
+        if (currentPlayer != PlayerColor.BLACK) return
+
+        val allMoves = getAllValidMoves(boardState, PlayerColor.BLACK)
         if (allMoves.isNotEmpty()) {
-            val move = allMoves.random()
-            executeMove(move.first, move.second, move.third)
+            // Ищем лучший ход на 3 шага вперед (Minimax)
+            var bestScore = -999999
+            var bestMove = allMoves.random()
+
+            for (move in allMoves) {
+                val nextBoard = executeMoveIfValid(boardState, move.first, move.second) ?: continue
+                val score = minimax(nextBoard, 3, false, -1000000, 1000000)
+                if (score > bestScore) {
+                    bestScore = score
+                    bestMove = move
+                }
+            }
+
+            boardState = executeMoveIfValid(boardState, bestMove.first, bestMove.second) ?: boardState
         }
 
         currentPlayer = PlayerColor.WHITE
+    }
+
+    private fun minimax(board: Array<Array<Cell>>, depth: Int, isMaximizing: Boolean, alpha: Int, beta: Int): Int {
+        if (depth == 0) {
+            return evaluateBoard(board)
+        }
+
+        var currentAlpha = alpha
+        var currentBeta = beta
+
+        if (isMaximizing) {
+            var maxEval = -999999
+            val moves = getAllValidMoves(board, PlayerColor.BLACK)
+            if (moves.isEmpty()) return -100000
+            for (move in moves) {
+                val nextBoard = executeMoveIfValid(board, move.first, move.second) ?: continue
+                val eval = minimax(nextBoard, depth - 1, false, currentAlpha, currentBeta)
+                maxEval = maxOf(maxEval, eval)
+                currentAlpha = maxOf(currentAlpha, eval)
+                if (currentBeta <= currentAlpha) break
+            }
+            return maxEval
+        } else {
+            var minEval = 999999
+            val moves = getAllValidMoves(board, PlayerColor.WHITE)
+            if (moves.isEmpty()) return 100000
+            for (move in moves) {
+                val nextBoard = executeMoveIfValid(board, move.first, move.second) ?: continue
+                val eval = minimax(nextBoard, depth - 1, true, currentAlpha, currentBeta)
+                minEval = minOf(minEval, eval)
+                currentBeta = minOf(currentBeta, eval)
+                if (currentBeta <= currentAlpha) break
+            }
+            return minEval
+        }
+    }
+
+    private fun evaluateBoard(board: Array<Array<Cell>>): Int {
+        var score = 0
+        for (r in 0..7) {
+            for (c in 0..7) {
+                val piece = board[r][c].piece
+                if (piece != null) {
+                    val value = if (piece.type == PieceType.KING) 20 else 10
+                    if (piece.color == PlayerColor.BLACK) {
+                        score += value + r // Черным выгодно продвигаться вниз
+                    } else {
+                        score -= value + (7 - r) // Белым выгодно продвигаться вверх
+                    }
+                }
+            }
+        }
+        return score
     }
 }
