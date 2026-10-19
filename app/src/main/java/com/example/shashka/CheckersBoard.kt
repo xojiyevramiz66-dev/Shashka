@@ -1,3 +1,5 @@
+package com.example.shashka
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -97,7 +99,7 @@ fun PieceView(piece: CheckerPiece) {
             .background(borderColor.copy(alpha = 0.3f), shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        // Если это дамка — рисуем корону или иконку K
+        // Если это дамка — рисуем корону
         if (piece.type == PieceType.KING) {
             Text(
                 text = "👑",
