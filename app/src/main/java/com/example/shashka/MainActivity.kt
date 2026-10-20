@@ -3,10 +3,8 @@ package com.example.shashka
 
 import android.app.Activity
 import android.content.Context
-import android.media.AudioTrack
-import android.media.AudioAttributes
-import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -41,10 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.sin
-import kotlin.random.Random
 
 private val BackgroundColor = Color(0xFF141414)
 private val PanelColor = Color(0xFF242424)
@@ -102,128 +96,50 @@ fun triggerVibration(context: Context, enabled: Boolean) {
             }
         }
     } catch (_: Exception) {
-        // Игра продолжает работать, даже если вибрация недоступна.
+        // Игра работает и без вибрации.
     }
 }
 
 /**
- * Мягкий синтезированный звук вместо системного писка.
- * success = true: короткий высокий щелчок.
- * success = false: более низкий звук для неудачного действия.
+ * Звук действий в игре.
+ * Успешное действие — короткий мягкий сигнал.
+ * Неудачное действие — другой системный сигнал.
  */
 private fun playGameSound(success: Boolean) {
-    var track: AudioTrack? = null
+    var tone: ToneGenerator? = null
 
     try {
-        val sampleRate = 22050
-        val durationMs = if (success) 75 else 110
-        val sampleCount = sampleRate * durationMs / 1000
-        val samples = ShortArray(sampleCount)
-
-        val frequency = if (success) 340.0 else 210.0
-        val volume = if (success) 0.30 else 0.22
-        val decayRate = if (success) 38.0 else 27.0
-
-        val random = Random.Default
-
-        for (i in samples.indices) {
-            val t = i.toDouble() / sampleRate
-
-            val attack = (t / 0.004).coerceIn(0.0, 1.0)
-            val decay = exp(-t * decayRate)
-
-            val fundamental =
-                sin(2.0 * PI * frequency * t) * 0.75
-
-            val overtone =
-                sin(2.0 * PI * frequency * 2.3 * t) * 0.25
-
-            // Очень тихая начальная составляющая имитирует касание.
-            val noise = if (i < sampleRate * 0.003) {
-                (random.nextDouble() * 2.0 - 1.0) * 0.035
-            } else {
-                0.0
-            }
-
-            val sample =
-                (fundamental + overtone + noise) *
-                    attack * decay * volume
-
-            samples[i] = (sample * Short.MAX_VALUE)
-                .toInt()
-                .coerceIn(
-                    Short.MIN_VALUE.toInt(),
-                    Short.MAX_VALUE.toInt()
-                )
-                .toShort()
-        }
-
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_GAME)
-            .setContentType(
-                AudioAttributes.CONTENT_TYPE_SONIFICATION
-            )
-            .build()
-
-        val audioFormat = AudioFormat.Builder()
-            .setSampleRate(sampleRate)
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-            .build()
-
-        track = AudioTrack(
-            audioAttributes,
-            audioFormat,
-            samples.size * 2,
-            AudioTrack.MODE_STATIC,
-            AudioManager.AUDIO_SESSION_ID_GENERATE
+        tone = ToneGenerator(
+            AudioManager.STREAM_MUSIC,
+            55
         )
 
-        val audioTrack = track
-
-        if (audioTrack.state != AudioTrack.STATE_INITIALIZED) {
-            audioTrack.release()
-            return
+        val soundType = if (success) {
+            ToneGenerator.TONE_PROP_BEEP2
+        } else {
+            ToneGenerator.TONE_PROP_NACK
         }
 
-        val written = audioTrack.write(
-            samples,
-            0,
-            samples.size
+        tone.startTone(
+            soundType,
+            if (success) 70 else 100
         )
 
-        if (written != samples.size) {
-            audioTrack.release()
-            return
-        }
-
-        audioTrack.setVolume(0.45f)
-        audioTrack.play()
+        val activeTone = tone
 
         Handler(Looper.getMainLooper()).postDelayed({
             try {
-                if (
-                    audioTrack.playState ==
-                    AudioTrack.PLAYSTATE_PLAYING
-                ) {
-                    audioTrack.stop()
-                }
+                activeTone.release()
             } catch (_: Exception) {
-                // Звук мог быть остановлен системой.
-            } finally {
-                try {
-                    audioTrack.release()
-                } catch (_: Exception) {
-                    // Игнорируем повторное освобождение.
-                }
+                // Ресурс уже освобождён.
             }
-        }, durationMs.toLong() + 150L)
+        }, 300L)
 
     } catch (_: Exception) {
         try {
-            track?.release()
+            tone?.release()
         } catch (_: Exception) {
-            // Звук необязателен.
+            // Ошибка звука не должна останавливать игру.
         }
     }
 }
