@@ -134,7 +134,8 @@ class CheckersViewModel : ViewModel() {
         boardState = newBoard
     }
 
-    private fun findCapturedPiece(board: Array<Array<Cell>>, from: Position, to: Position): Position? {
+    // Исправлено: теперь метод принимает цвет текущей фигуры, чтобы не сбивать свои
+    private fun findCapturedPiece(board: Array<Array<Cell>>, from: Position, to: Position, pieceColor: PlayerColor): Position? {
         val rowDiff = to.row - from.row
         val colDiff = to.col - from.col
         if (kotlin.math.abs(rowDiff) != kotlin.math.abs(colDiff)) return null
@@ -150,6 +151,8 @@ class CheckersViewModel : ViewModel() {
         while (r != to.row && c != to.col) {
             val p = board[r][c].piece
             if (p != null) {
+                // Если на пути своя фигура — срубить невозможно вообще
+                if (p.color == pieceColor) return null
                 opponentCount++
                 capturedPos = Position(r, c)
             }
@@ -160,14 +163,16 @@ class CheckersViewModel : ViewModel() {
     }
 
     private fun isCaptureMove(from: Position, to: Position): Boolean {
-        return findCapturedPiece(boardState, from, to) != null
+        val piece = boardState[from.row][from.col].piece ?: return false
+        return findCapturedPiece(boardState, from, to, piece.color) != null
     }
 
     private fun hasCaptureMovesForPiece(board: Array<Array<Cell>>, pos: Position): Boolean {
+        val piece = board[pos.row][pos.col].piece ?: return false
         for (r in 0..7) {
             for (c in 0..7) {
                 val to = Position(r, c)
-                if (isValidMoveOnBoard(board, pos, to) && findCapturedPiece(board, pos, to) != null) {
+                if (isValidMoveOnBoard(board, pos, to) && findCapturedPiece(board, pos, to, piece.color) != null) {
                     return true
                 }
             }
@@ -205,13 +210,13 @@ class CheckersViewModel : ViewModel() {
             if (steps == 1 && mandatoryCapturingPiece == null) {
                 return rowDiff == forwardDir
             } 
-            // Взятие всегда строго на 2 клетки (даже в серии из 2-3 прыжков каждый отдельный удар делается на 2 клетки через шашку)
+            // Взятие через шашку противника на 2 клетки
             else if (steps == 2) {
-                val captured = findCapturedPiece(board, from, to)
+                val captured = findCapturedPiece(board, from, to, piece.color)
                 return captured != null && board[captured.row][captured.col].piece?.color != piece.color
             }
         } else if (piece.type == PieceType.KING) {
-            val captured = findCapturedPiece(board, from, to)
+            val captured = findCapturedPiece(board, from, to, piece.color)
             val rowStep = if (rowDiff > 0) 1 else -1
             val colStep = if (colDiff > 0) 1 else -1
             var r = from.row + rowStep
@@ -220,9 +225,12 @@ class CheckersViewModel : ViewModel() {
 
             while (r != to.row && c != to.col) {
                 val p = board[r][c].piece
-                if (p != null && (captured == null || r != captured.row || c != captured.col)) {
-                    blocked = true
-                    break
+                if (p != null) {
+                    // Дамка упирается в любую фигуру на пути (свою или чуждую, если она не единственная для взятия)
+                    if (captured == null || r != captured.row || c != captured.col) {
+                        blocked = true
+                        break
+                    }
                 }
                 r += rowStep
                 c += colStep
@@ -239,23 +247,26 @@ class CheckersViewModel : ViewModel() {
             }
         }
 
-        var piece = newBoard[from.row][from.col].piece
+        val piece = newBoard[from.row][from.col].piece
         newBoard[from.row][from.col] = newBoard[from.row][from.col].copy(piece = null)
 
-        val capturedPos = findCapturedPiece(newBoard, from, to)
-        if (capturedPos != null) {
-            newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
-        }
-
         if (piece != null) {
-            if (piece.color == PlayerColor.WHITE && to.row == 0) {
-                piece = piece.copy(type = PieceType.KING)
-            } else if (piece.color == PlayerColor.BLACK && to.row == 7) {
-                piece = piece.copy(type = PieceType.KING)
+            val capturedPos = findCapturedPiece(newBoard, from, to, piece.color)
+            if (capturedPos != null) {
+                newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
             }
         }
 
-        newBoard[to.row][to.col] = newBoard[to.row][to.col].copy(piece = piece)
+        var updatedPiece = piece
+        if (updatedPiece != null) {
+            if (updatedPiece.color == PlayerColor.WHITE && to.row == 0) {
+                updatedPiece = updatedPiece.copy(type = PieceType.KING)
+            } else if (updatedPiece.color == PlayerColor.BLACK && to.row == 7) {
+                updatedPiece = updatedPiece.copy(type = PieceType.KING)
+            }
+        }
+
+        newBoard[to.row][to.col] = newBoard[to.row][to.col].copy(piece = updatedPiece)
         boardState = newBoard
     }
 
@@ -387,22 +398,25 @@ class CheckersViewModel : ViewModel() {
                 board[r][c].copy()
             }
         }
-        var piece = newBoard[from.row][from.col].piece
+        val piece = newBoard[from.row][from.col].piece
         newBoard[from.row][from.col] = newBoard[from.row][from.col].copy(piece = null)
 
-        val capturedPos = findCapturedPiece(newBoard, from, to)
-        if (capturedPos != null) {
-            newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
-        }
-
         if (piece != null) {
-            if (piece.color == PlayerColor.WHITE && to.row == 0) {
-                piece = piece.copy(type = PieceType.KING)
-            } else if (piece.color == PlayerColor.BLACK && to.row == 7) {
-                piece = piece.copy(type = PieceType.KING)
+            val capturedPos = findCapturedPiece(newBoard, from, to, piece.color)
+            if (capturedPos != null) {
+                newBoard[capturedPos.row][capturedPos.col] = newBoard[capturedPos.row][capturedPos.col].copy(piece = null)
             }
         }
-        newBoard[to.row][to.col] = newBoard[to.row][to.col].copy(piece = piece)
+
+        var updatedPiece = piece
+        if (updatedPiece != null) {
+            if (updatedPiece.color == PlayerColor.WHITE && to.row == 0) {
+                updatedPiece = updatedPiece.copy(type = PieceType.KING)
+            } else if (updatedPiece.color == PlayerColor.BLACK && to.row == 7) {
+                updatedPiece = updatedPiece.copy(type = PieceType.KING)
+            }
+        }
+        newBoard[to.row][to.col] = newBoard[to.row][to.col].copy(piece = updatedPiece)
         return newBoard
     }
 }
