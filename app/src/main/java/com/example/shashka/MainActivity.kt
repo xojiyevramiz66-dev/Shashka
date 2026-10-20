@@ -3,8 +3,10 @@ package com.example.shashka
 
 import android.app.Activity
 import android.content.Context
+import android.media.AudioTrack
+import android.media.AudioAttributes
+import android.media.AudioFormat
 import android.media.AudioManager
-import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -39,6 +41,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import kotlin.math.PI
+import kotlin.math.exp
+import kotlin.math.sin
+import kotlin.random.Random
 
 private val BackgroundColor = Color(0xFF141414)
 private val PanelColor = Color(0xFF242424)
@@ -100,28 +106,125 @@ fun triggerVibration(context: Context, enabled: Boolean) {
     }
 }
 
+/**
+ * Мягкий синтезированный звук вместо системного писка.
+ * success = true: короткий высокий щелчок.
+ * success = false: более низкий звук для неудачного действия.
+ */
 private fun playGameSound(success: Boolean) {
-    try {
-        val tone = ToneGenerator(AudioManager.STREAM_MUSIC, 65)
+    var track: AudioTrack? = null
 
-        tone.startTone(
-            if (success) {
-                ToneGenerator.TONE_PROP_ACK
+    try {
+        val sampleRate = 22050
+        val durationMs = if (success) 75 else 110
+        val sampleCount = sampleRate * durationMs / 1000
+        val samples = ShortArray(sampleCount)
+
+        val frequency = if (success) 340.0 else 210.0
+        val volume = if (success) 0.30 else 0.22
+        val decayRate = if (success) 38.0 else 27.0
+
+        val random = Random.Default
+
+        for (i in samples.indices) {
+            val t = i.toDouble() / sampleRate
+
+            val attack = (t / 0.004).coerceIn(0.0, 1.0)
+            val decay = exp(-t * decayRate)
+
+            val fundamental =
+                sin(2.0 * PI * frequency * t) * 0.75
+
+            val overtone =
+                sin(2.0 * PI * frequency * 2.3 * t) * 0.25
+
+            // Очень тихая начальная составляющая имитирует касание.
+            val noise = if (i < sampleRate * 0.003) {
+                (random.nextDouble() * 2.0 - 1.0) * 0.035
             } else {
-                ToneGenerator.TONE_PROP_NACK
-            },
-            120
+                0.0
+            }
+
+            val sample =
+                (fundamental + overtone + noise) *
+                    attack * decay * volume
+
+            samples[i] = (sample * Short.MAX_VALUE)
+                .toInt()
+                .coerceIn(
+                    Short.MIN_VALUE.toInt(),
+                    Short.MAX_VALUE.toInt()
+                )
+                .toShort()
+        }
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(
+                AudioAttributes.CONTENT_TYPE_SONIFICATION
+            )
+            .build()
+
+        val audioFormat = AudioFormat.Builder()
+            .setSampleRate(sampleRate)
+            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+            .build()
+
+        track = AudioTrack(
+            audioAttributes,
+            audioFormat,
+            samples.size * 2,
+            AudioTrack.MODE_STATIC,
+            AudioManager.AUDIO_SESSION_ID_GENERATE
         )
+
+        val audioTrack = track
+
+        if (audioTrack.state != AudioTrack.STATE_INITIALIZED) {
+            audioTrack.release()
+            return
+        }
+
+        val written = audioTrack.write(
+            samples,
+            0,
+            samples.size
+        )
+
+        if (written != samples.size) {
+            audioTrack.release()
+            return
+        }
+
+        audioTrack.setVolume(0.45f)
+        audioTrack.play()
 
         Handler(Looper.getMainLooper()).postDelayed({
             try {
-                tone.release()
+                if (
+                    audioTrack.playState ==
+                    AudioTrack.PLAYSTATE_PLAYING
+                ) {
+                    audioTrack.stop()
+                }
             } catch (_: Exception) {
-                // Игнорируем ошибку освобождения звука.
+                // Звук мог быть остановлен системой.
+            } finally {
+                try {
+                    audioTrack.release()
+                } catch (_: Exception) {
+                    // Игнорируем повторное освобождение.
+                }
             }
-        }, 250)
+        }, durationMs.toLong() + 150L)
+
     } catch (_: Exception) {
-        // Звук необязателен.
+        try {
+            track?.release()
+        } catch (_: Exception) {
+            // Звук необязателен.
+        }
     }
 }
 
@@ -157,19 +260,27 @@ fun CheckersScreen(
     }
 
     var soundEnabled by remember {
-        mutableStateOf(prefs.getBoolean("sound_enabled", true))
+        mutableStateOf(
+            prefs.getBoolean("sound_enabled", true)
+        )
     }
 
     var vibrationEnabled by remember {
-        mutableStateOf(prefs.getBoolean("vibration_enabled", true))
+        mutableStateOf(
+            prefs.getBoolean("vibration_enabled", true)
+        )
     }
 
     var whiteSeconds by remember {
-        mutableIntStateOf(prefs.getInt("white_seconds", 600))
+        mutableIntStateOf(
+            prefs.getInt("white_seconds", 600)
+        )
     }
 
     var blackSeconds by remember {
-        mutableIntStateOf(prefs.getInt("black_seconds", 600))
+        mutableIntStateOf(
+            prefs.getInt("black_seconds", 600)
+        )
     }
 
     LaunchedEffect(Unit) {
@@ -189,7 +300,6 @@ fun CheckersScreen(
         blackSeconds = 600
     }
 
-    // Отдельный таймер для стороны, которая сейчас ходит.
     LaunchedEffect(
         currentPlayer,
         gameMessage,
@@ -227,7 +337,6 @@ fun CheckersScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Верхняя панель.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -275,7 +384,6 @@ fun CheckersScreen(
             )
         }
 
-        // Панель противника.
         PlayerPanel(
             title = "ПРОТИВНИК",
             subtitle = "ИИ • ${viewModel.aiDifficulty}",
@@ -285,7 +393,6 @@ fun CheckersScreen(
             isWhite = false
         )
 
-        // Игровая доска.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -320,7 +427,7 @@ fun CheckersScreen(
 
                             val isSelected =
                                 selected?.row == row &&
-                                selected.col == col
+                                    selected.col == col
 
                             val isDarkCell = (row + col) % 2 != 0
 
@@ -382,12 +489,17 @@ fun CheckersScreen(
                                     AnimatedPieceWrapper(piece = piece)
                                 }
 
-                                if (cell.isHighlighted && cell.piece == null) {
+                                if (
+                                    cell.isHighlighted &&
+                                    cell.piece == null
+                                ) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize(0.23f)
                                             .background(
-                                                Color.White.copy(alpha = 0.65f),
+                                                Color.White.copy(
+                                                    alpha = 0.65f
+                                                ),
                                                 CircleShape
                                             )
                                     )
@@ -423,7 +535,6 @@ fun CheckersScreen(
             }
         }
 
-        // Панель игрока.
         PlayerPanel(
             title = "ВЫ",
             subtitle = "Белые шашки",
@@ -433,7 +544,6 @@ fun CheckersScreen(
             isWhite = true
         )
 
-        // Кнопки управления.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -483,7 +593,6 @@ fun CheckersScreen(
         }
     }
 
-    // Окно настроек.
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -526,7 +635,10 @@ fun CheckersScreen(
                                         viewModel.aiDifficulty = level
 
                                         prefs.edit()
-                                            .putString("ai_difficulty", level)
+                                            .putString(
+                                                "ai_difficulty",
+                                                level
+                                            )
                                             .apply()
 
                                         triggerVibration(
@@ -569,6 +681,7 @@ fun CheckersScreen(
                         checked = soundEnabled,
                         onCheckedChange = {
                             soundEnabled = it
+
                             prefs.edit()
                                 .putBoolean("sound_enabled", it)
                                 .apply()
@@ -582,6 +695,7 @@ fun CheckersScreen(
                         checked = vibrationEnabled,
                         onCheckedChange = {
                             vibrationEnabled = it
+
                             prefs.edit()
                                 .putBoolean("vibration_enabled", it)
                                 .apply()
@@ -628,7 +742,6 @@ fun CheckersScreen(
         )
     }
 
-    // Окно завершения игры.
     gameMessage?.let { message ->
         AlertDialog(
             onDismissRequest = {},
@@ -703,7 +816,11 @@ private fun PlayerPanel(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isActive) Color(0xFF29251B) else Color(0xFF1C1C1C),
+                if (isActive) {
+                    Color(0xFF29251B)
+                } else {
+                    Color(0xFF1C1C1C)
+                },
                 RoundedCornerShape(12.dp)
             )
             .border(
@@ -745,7 +862,11 @@ private fun PlayerPanel(
                     )
                     .border(
                         1.dp,
-                        if (isWhite) Color(0xFFE8D3AD) else Color(0xFF777777),
+                        if (isWhite) {
+                            Color(0xFFE8D3AD)
+                        } else {
+                            Color(0xFF777777)
+                        },
                         CircleShape
                     )
             )
@@ -889,14 +1010,12 @@ fun UltraHD3DPieceView(
                 size.height / 2f
             )
 
-            // Тень под шашкой.
             drawCircle(
                 color = Color.Black.copy(alpha = 0.42f),
                 radius = radius,
                 center = center + Offset(0f, radius * 0.14f)
             )
 
-            // Тёмный нижний слой создаёт эффект толщины.
             drawCircle(
                 color = if (isWhite) {
                     Color(0xFF8A6A43)
@@ -915,7 +1034,10 @@ fun UltraHD3DPieceView(
                         Color(0xFFC4A77D),
                         Color(0xFF8B6D45)
                     ),
-                    center = center - Offset(radius * 0.3f, radius * 0.35f),
+                    center = center - Offset(
+                        radius * 0.3f,
+                        radius * 0.35f
+                    ),
                     radius = radius * 1.6f
                 )
             } else {
@@ -926,7 +1048,10 @@ fun UltraHD3DPieceView(
                         Color(0xFF151515),
                         Color.Black
                     ),
-                    center = center - Offset(radius * 0.3f, radius * 0.35f),
+                    center = center - Offset(
+                        radius * 0.3f,
+                        radius * 0.35f
+                    ),
                     radius = radius * 1.6f
                 )
             }
@@ -979,42 +1104,44 @@ fun UltraHD3DPieceView(
             )
 
             if (piece.type == PieceType.KING) {
-                // Золотая корона обозначает дамку.
-                val crownCenter = center - Offset(0f, radius * 0.03f)
+                val crownCenter =
+                    center - Offset(0f, radius * 0.03f)
+
                 val crownWidth = radius * 0.95f
                 val crownHeight = radius * 0.65f
 
-                val crownPath = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(
-                        crownCenter.x - crownWidth / 2f,
-                        crownCenter.y + crownHeight / 2f
-                    )
-                    lineTo(
-                        crownCenter.x - crownWidth * 0.42f,
-                        crownCenter.y - crownHeight * 0.25f
-                    )
-                    lineTo(
-                        crownCenter.x - crownWidth * 0.12f,
-                        crownCenter.y + crownHeight * 0.05f
-                    )
-                    lineTo(
-                        crownCenter.x,
-                        crownCenter.y - crownHeight / 2f
-                    )
-                    lineTo(
-                        crownCenter.x + crownWidth * 0.12f,
-                        crownCenter.y + crownHeight * 0.05f
-                    )
-                    lineTo(
-                        crownCenter.x + crownWidth * 0.42f,
-                        crownCenter.y - crownHeight * 0.25f
-                    )
-                    lineTo(
-                        crownCenter.x + crownWidth / 2f,
-                        crownCenter.y + crownHeight / 2f
-                    )
-                    close()
-                }
+                val crownPath =
+                    androidx.compose.ui.graphics.Path().apply {
+                        moveTo(
+                            crownCenter.x - crownWidth / 2f,
+                            crownCenter.y + crownHeight / 2f
+                        )
+                        lineTo(
+                            crownCenter.x - crownWidth * 0.42f,
+                            crownCenter.y - crownHeight * 0.25f
+                        )
+                        lineTo(
+                            crownCenter.x - crownWidth * 0.12f,
+                            crownCenter.y + crownHeight * 0.05f
+                        )
+                        lineTo(
+                            crownCenter.x,
+                            crownCenter.y - crownHeight / 2f
+                        )
+                        lineTo(
+                            crownCenter.x + crownWidth * 0.12f,
+                            crownCenter.y + crownHeight * 0.05f
+                        )
+                        lineTo(
+                            crownCenter.x + crownWidth * 0.42f,
+                            crownCenter.y - crownHeight * 0.25f
+                        )
+                        lineTo(
+                            crownCenter.x + crownWidth / 2f,
+                            crownCenter.y + crownHeight / 2f
+                        )
+                        close()
+                    }
 
                 drawPath(
                     path = crownPath,
@@ -1033,7 +1160,8 @@ fun UltraHD3DPieceView(
                     style = Stroke(width = radius * 0.045f)
                 )
 
-                val jewelY = crownCenter.y - crownHeight * 0.22f
+                val jewelY =
+                    crownCenter.y - crownHeight * 0.22f
 
                 listOf(
                     crownCenter.x - crownWidth * 0.42f,
