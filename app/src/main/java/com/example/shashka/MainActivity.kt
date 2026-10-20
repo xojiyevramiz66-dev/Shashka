@@ -30,8 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -100,19 +102,11 @@ fun triggerVibration(context: Context, enabled: Boolean) {
     }
 }
 
-/**
- * Звук действий в игре.
- * Успешное действие — короткий мягкий сигнал.
- * Неудачное действие — другой системный сигнал.
- */
 private fun playGameSound(success: Boolean) {
     var tone: ToneGenerator? = null
 
     try {
-        tone = ToneGenerator(
-            AudioManager.STREAM_MUSIC,
-            55
-        )
+        tone = ToneGenerator(AudioManager.STREAM_MUSIC, 55)
 
         val soundType = if (success) {
             ToneGenerator.TONE_PROP_BEEP2
@@ -120,10 +114,7 @@ private fun playGameSound(success: Boolean) {
             ToneGenerator.TONE_PROP_NACK
         }
 
-        tone.startTone(
-            soundType,
-            if (success) 70 else 100
-        )
+        tone.startTone(soundType, if (success) 70 else 100)
 
         val activeTone = tone
 
@@ -134,7 +125,6 @@ private fun playGameSound(success: Boolean) {
                 // Ресурс уже освобождён.
             }
         }, 300L)
-
     } catch (_: Exception) {
         try {
             tone?.release()
@@ -176,27 +166,19 @@ fun CheckersScreen(
     }
 
     var soundEnabled by remember {
-        mutableStateOf(
-            prefs.getBoolean("sound_enabled", true)
-        )
+        mutableStateOf(prefs.getBoolean("sound_enabled", true))
     }
 
     var vibrationEnabled by remember {
-        mutableStateOf(
-            prefs.getBoolean("vibration_enabled", true)
-        )
+        mutableStateOf(prefs.getBoolean("vibration_enabled", true))
     }
 
     var whiteSeconds by remember {
-        mutableIntStateOf(
-            prefs.getInt("white_seconds", 600)
-        )
+        mutableIntStateOf(prefs.getInt("white_seconds", 600))
     }
 
     var blackSeconds by remember {
-        mutableIntStateOf(
-            prefs.getInt("black_seconds", 600)
-        )
+        mutableIntStateOf(prefs.getInt("black_seconds", 600))
     }
 
     LaunchedEffect(Unit) {
@@ -413,9 +395,7 @@ fun CheckersScreen(
                                         modifier = Modifier
                                             .fillMaxSize(0.23f)
                                             .background(
-                                                Color.White.copy(
-                                                    alpha = 0.65f
-                                                ),
+                                                Color.White.copy(alpha = 0.65f),
                                                 CircleShape
                                             )
                                     )
@@ -551,10 +531,7 @@ fun CheckersScreen(
                                         viewModel.aiDifficulty = level
 
                                         prefs.edit()
-                                            .putString(
-                                                "ai_difficulty",
-                                                level
-                                            )
+                                            .putString("ai_difficulty", level)
                                             .apply()
 
                                         triggerVibration(
@@ -683,10 +660,7 @@ fun CheckersScreen(
                         contentColor = Color(0xFF141414)
                     )
                 ) {
-                    Text(
-                        "Новая игра",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Новая игра", fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -732,16 +706,14 @@ private fun PlayerPanel(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isActive) {
-                    Color(0xFF29251B)
-                } else {
-                    Color(0xFF1C1C1C)
-                },
+                if (isActive) Color(0xFF29251B)
+                else Color(0xFF1C1C1C),
                 RoundedCornerShape(12.dp)
             )
             .border(
                 width = if (isActive) 1.dp else 0.5.dp,
-                color = if (isActive) GoldColor else Color(0xFF333333),
+                color = if (isActive) GoldColor
+                else Color(0xFF333333),
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -778,11 +750,8 @@ private fun PlayerPanel(
                     )
                     .border(
                         1.dp,
-                        if (isWhite) {
-                            Color(0xFFE8D3AD)
-                        } else {
-                            Color(0xFF777777)
-                        },
+                        if (isWhite) Color(0xFFE8D3AD)
+                        else Color(0xFF777777),
                         CircleShape
                     )
             )
@@ -907,6 +876,10 @@ fun AnimatedPieceWrapper(piece: CheckerPiece) {
     }
 }
 
+/**
+ * Объёмные шашки: затенённая боковая стенка,
+ * полированная верхняя поверхность и золотая корона.
+ */
 @Composable
 fun UltraHD3DPieceView(
     piece: CheckerPiece,
@@ -915,192 +888,333 @@ fun UltraHD3DPieceView(
     val isWhite = piece.color == PlayerColor.WHITE
 
     Box(
-        modifier = Modifier
-            .fillMaxSize(scale.coerceIn(0.5f, 1f)),
+        modifier = Modifier.fillMaxSize(
+            scale.coerceIn(0.5f, 1f)
+        ),
         contentAlignment = Alignment.Center
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            val radius = size.minDimension * 0.47f
+            val radius = size.minDimension * 0.46f
             val center = Offset(
                 size.width / 2f,
                 size.height / 2f
             )
 
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.42f),
-                radius = radius,
-                center = center + Offset(0f, radius * 0.14f)
+            // Мягкая тень под фишкой
+            drawOval(
+                color = Color.Black.copy(alpha = 0.52f),
+                topLeft = Offset(
+                    center.x - radius * 0.91f,
+                    center.y - radius * 0.22f
+                ),
+                size = Size(
+                    radius * 1.82f,
+                    radius * 1.42f
+                )
             )
 
-            drawCircle(
-                color = if (isWhite) {
-                    Color(0xFF8A6A43)
-                } else {
-                    Color(0xFF050505)
-                },
-                radius = radius * 0.97f,
-                center = center + Offset(0f, radius * 0.07f)
+            // Толстая боковая стенка
+            val sideBrush = if (isWhite) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFEAD8B9),
+                        Color(0xFFB18A58),
+                        Color(0xFF79542E),
+                        Color(0xFF4D341D)
+                    ),
+                    startY = center.y - radius * 0.1f,
+                    endY = center.y + radius * 0.62f
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF777777),
+                        Color(0xFF393939),
+                        Color(0xFF151515),
+                        Color(0xFF030303)
+                    ),
+                    startY = center.y - radius * 0.1f,
+                    endY = center.y + radius * 0.62f
+                )
+            }
+
+            drawOval(
+                brush = sideBrush,
+                topLeft = Offset(
+                    center.x - radius * 0.94f,
+                    center.y - radius * 0.02f
+                ),
+                size = Size(
+                    radius * 1.88f,
+                    radius * 0.65f
+                )
             )
 
-            val bodyBrush = if (isWhite) {
+            // Нижний металлический кант
+            drawCircle(
+                brush = Brush.verticalGradient(
+                    colors = if (isWhite) {
+                        listOf(
+                            Color(0xFFFFF1D7),
+                            Color(0xFFC9A878),
+                            Color(0xFF8C6538)
+                        )
+                    } else {
+                        listOf(
+                            Color(0xFF969696),
+                            Color(0xFF454545),
+                            Color(0xFF101010)
+                        )
+                    }
+                ),
+                radius = radius * 0.98f,
+                center = center - Offset(
+                    0f,
+                    radius * 0.10f
+                )
+            )
+
+            // Верхняя поверхность приподнята над боковой стенкой
+            val faceCenter = center - Offset(
+                0f,
+                radius * 0.20f
+            )
+
+            val faceBrush = if (isWhite) {
                 Brush.radialGradient(
                     colors = listOf(
-                        Color.White,
-                        Color(0xFFF3E6D1),
-                        Color(0xFFC4A77D),
-                        Color(0xFF8B6D45)
+                        Color(0xFFFFFFFF),
+                        Color(0xFFFFF4DF),
+                        Color(0xFFE5CDA7),
+                        Color(0xFFB18B59)
                     ),
-                    center = center - Offset(
-                        radius * 0.3f,
-                        radius * 0.35f
+                    center = faceCenter - Offset(
+                        radius * 0.32f,
+                        radius * 0.40f
                     ),
-                    radius = radius * 1.6f
+                    radius = radius * 1.65f
                 )
             } else {
                 Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFF777777),
-                        Color(0xFF383838),
-                        Color(0xFF151515),
-                        Color.Black
+                        Color(0xFF858585),
+                        Color(0xFF4A4A4A),
+                        Color(0xFF242424),
+                        Color(0xFF080808),
+                        Color(0xFF000000)
                     ),
-                    center = center - Offset(
-                        radius * 0.3f,
-                        radius * 0.35f
+                    center = faceCenter - Offset(
+                        radius * 0.32f,
+                        radius * 0.40f
                     ),
-                    radius = radius * 1.6f
+                    radius = radius * 1.65f
                 )
             }
 
             drawCircle(
-                brush = bodyBrush,
-                radius = radius * 0.96f,
-                center = center
+                brush = faceBrush,
+                radius = radius * 0.94f,
+                center = faceCenter
             )
 
+            // Полированный внешний ободок
+            drawCircle(
+                brush = Brush.linearGradient(
+                    colors = if (isWhite) {
+                        listOf(
+                            Color(0xFFFFF8E9),
+                            Color(0xFFB99A6D),
+                            Color(0xFFFFF1D2)
+                        )
+                    } else {
+                        listOf(
+                            Color(0xFFAAAAAA),
+                            Color(0xFF444444),
+                            Color(0xFF777777)
+                        )
+                    },
+                    start = Offset(
+                        faceCenter.x - radius,
+                        faceCenter.y - radius
+                    ),
+                    end = Offset(
+                        faceCenter.x + radius,
+                        faceCenter.y + radius
+                    )
+                ),
+                radius = radius * 0.88f,
+                center = faceCenter,
+                style = Stroke(width = radius * 0.075f)
+            )
+
+            // Световой блик
+            drawCircle(
+                color = Color.White.copy(
+                    alpha = if (isWhite) 0.72f else 0.34f
+                ),
+                radius = radius * 0.72f,
+                center = faceCenter - Offset(
+                    0f,
+                    radius * 0.025f
+                ),
+                style = Stroke(width = radius * 0.035f)
+            )
+
+            // Внутренние кольца
             drawCircle(
                 color = if (isWhite) {
-                    Color(0xFFE8D5B7)
+                    Color(0xFFC6A579)
                 } else {
-                    Color(0xFF696969)
+                    Color(0xFF111111)
                 },
-                radius = radius * 0.92f,
-                center = center,
+                radius = radius * 0.57f,
+                center = faceCenter,
                 style = Stroke(width = radius * 0.075f)
             )
 
             drawCircle(
-                color = Color.White.copy(
-                    alpha = if (isWhite) 0.45f else 0.13f
+                brush = Brush.radialGradient(
+                    colors = if (isWhite) {
+                        listOf(
+                            Color(0xFFFFFFFF),
+                            Color(0xFFE5D1AD),
+                            Color(0xFFB99A6C)
+                        )
+                    } else {
+                        listOf(
+                            Color(0xFF505050),
+                            Color(0xFF202020),
+                            Color(0xFF080808)
+                        )
+                    },
+                    center = faceCenter - Offset(
+                        radius * 0.15f,
+                        radius * 0.18f
+                    ),
+                    radius = radius * 0.75f
                 ),
-                radius = radius * 0.78f,
-                center = center - Offset(0f, radius * 0.04f),
-                style = Stroke(width = radius * 0.035f)
+                radius = radius * 0.48f,
+                center = faceCenter
             )
 
-            drawCircle(
-                color = if (isWhite) {
-                    Color(0xFFB79A70)
-                } else {
-                    Color(0xFF080808)
-                },
-                radius = radius * 0.60f,
-                center = center,
-                style = Stroke(width = radius * 0.07f)
-            )
-
-            drawCircle(
-                color = if (isWhite) {
-                    Color(0xFFEAD9BD)
-                } else {
-                    Color(0xFF303030)
-                },
-                radius = radius * 0.43f,
-                center = center
+            // Отражение света на поверхности
+            drawOval(
+                color = Color.White.copy(
+                    alpha = if (isWhite) 0.48f else 0.19f
+                ),
+                topLeft = Offset(
+                    faceCenter.x - radius * 0.53f,
+                    faceCenter.y - radius * 0.66f
+                ),
+                size = Size(
+                    radius * 0.62f,
+                    radius * 0.13f
+                )
             )
 
             if (piece.type == PieceType.KING) {
-                val crownCenter =
-                    center - Offset(0f, radius * 0.03f)
+                val crownCenter = faceCenter - Offset(
+                    0f,
+                    radius * 0.015f
+                )
 
                 val crownWidth = radius * 0.95f
                 val crownHeight = radius * 0.65f
 
-                val crownPath =
-                    androidx.compose.ui.graphics.Path().apply {
-                        moveTo(
-                            crownCenter.x - crownWidth / 2f,
-                            crownCenter.y + crownHeight / 2f
-                        )
-                        lineTo(
-                            crownCenter.x - crownWidth * 0.42f,
-                            crownCenter.y - crownHeight * 0.25f
-                        )
-                        lineTo(
-                            crownCenter.x - crownWidth * 0.12f,
-                            crownCenter.y + crownHeight * 0.05f
-                        )
-                        lineTo(
-                            crownCenter.x,
-                            crownCenter.y - crownHeight / 2f
-                        )
-                        lineTo(
-                            crownCenter.x + crownWidth * 0.12f,
-                            crownCenter.y + crownHeight * 0.05f
-                        )
-                        lineTo(
-                            crownCenter.x + crownWidth * 0.42f,
-                            crownCenter.y - crownHeight * 0.25f
-                        )
-                        lineTo(
-                            crownCenter.x + crownWidth / 2f,
-                            crownCenter.y + crownHeight / 2f
-                        )
-                        close()
-                    }
+                val crownPath = Path().apply {
+                    moveTo(
+                        crownCenter.x - crownWidth * 0.50f,
+                        crownCenter.y + crownHeight * 0.38f
+                    )
+                    lineTo(
+                        crownCenter.x - crownWidth * 0.43f,
+                        crownCenter.y - crownHeight * 0.28f
+                    )
+                    lineTo(
+                        crownCenter.x - crownWidth * 0.16f,
+                        crownCenter.y + crownHeight * 0.02f
+                    )
+                    lineTo(
+                        crownCenter.x,
+                        crownCenter.y - crownHeight * 0.50f
+                    )
+                    lineTo(
+                        crownCenter.x + crownWidth * 0.16f,
+                        crownCenter.y + crownHeight * 0.02f
+                    )
+                    lineTo(
+                        crownCenter.x + crownWidth * 0.43f,
+                        crownCenter.y - crownHeight * 0.28f
+                    )
+                    lineTo(
+                        crownCenter.x + crownWidth * 0.50f,
+                        crownCenter.y + crownHeight * 0.38f
+                    )
+                    close()
+                }
 
+                // Тень короны
+                drawPath(
+                    path = crownPath,
+                    color = Color.Black.copy(alpha = 0.65f)
+                )
+
+                // Золотая поверхность короны
                 drawPath(
                     path = crownPath,
                     brush = Brush.verticalGradient(
-                        listOf(
-                            Color(0xFFFFF8D0),
+                        colors = listOf(
+                            Color(0xFFFFFFE0),
                             Color(0xFFFFD54F),
-                            Color(0xFFB8860B)
-                        )
+                            Color(0xFFD49A18),
+                            Color(0xFF80520A)
+                        ),
+                        startY = crownCenter.y - crownHeight,
+                        endY = crownCenter.y + crownHeight
                     )
                 )
 
                 drawPath(
                     path = crownPath,
-                    color = Color(0xFF6D4C0C),
+                    color = Color(0xFF70450B),
                     style = Stroke(width = radius * 0.045f)
                 )
 
-                val jewelY =
-                    crownCenter.y - crownHeight * 0.22f
-
+                // Три сияющих камня на короне
                 listOf(
                     crownCenter.x - crownWidth * 0.42f,
                     crownCenter.x,
                     crownCenter.x + crownWidth * 0.42f
                 ).forEach { jewelX ->
+                    val jewelY =
+                        crownCenter.y - crownHeight * 0.22f
+
                     drawCircle(
-                        color = Color(0xFFFFFDE7),
+                        color = Color(0xFF8D5E00),
+                        radius = radius * 0.075f,
+                        center = Offset(
+                            jewelX,
+                            jewelY + radius * 0.025f
+                        )
+                    )
+
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White,
+                                Color(0xFFFFF1A8),
+                                Color(0xFFD99A10)
+                            ),
+                            center = Offset(
+                                jewelX - radius * 0.02f,
+                                jewelY - radius * 0.02f
+                            ),
+                            radius = radius * 0.12f
+                        ),
                         radius = radius * 0.055f,
                         center = Offset(jewelX, jewelY)
                     )
                 }
-            } else {
-                drawCircle(
-                    color = if (isWhite) {
-                        Color.White.copy(alpha = 0.65f)
-                    } else {
-                        Color(0xFF888888)
-                    },
-                    radius = radius * 0.18f,
-                    center = center,
-                    style = Stroke(width = radius * 0.045f)
-                )
             }
         }
     }
