@@ -1,14 +1,9 @@
-
 package com.example.shashka
 
 import android.app.Activity
 import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -102,38 +97,6 @@ fun triggerVibration(context: Context, enabled: Boolean) {
     }
 }
 
-private fun playGameSound(success: Boolean) {
-    var tone: ToneGenerator? = null
-
-    try {
-        tone = ToneGenerator(AudioManager.STREAM_MUSIC, 55)
-
-        val soundType = if (success) {
-            ToneGenerator.TONE_PROP_BEEP2
-        } else {
-            ToneGenerator.TONE_PROP_NACK
-        }
-
-        tone.startTone(soundType, if (success) 70 else 100)
-
-        val activeTone = tone
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            try {
-                activeTone.release()
-            } catch (_: Exception) {
-                // Ресурс уже освобождён.
-            }
-        }, 300L)
-    } catch (_: Exception) {
-        try {
-            tone?.release()
-        } catch (_: Exception) {
-            // Ошибка звука не должна останавливать игру.
-        }
-    }
-}
-
 private fun formatClock(seconds: Int): String {
     val safeSeconds = seconds.coerceAtLeast(0)
     val minutes = safeSeconds / 60
@@ -179,6 +142,39 @@ fun CheckersScreen(
 
     var blackSeconds by remember {
         mutableIntStateOf(prefs.getInt("black_seconds", 600))
+    }
+
+    /*
+     * ЗАПОМИНАЕМ РАСПОЛОЖЕНИЕ ШАШЕК.
+     *
+     * Простое нажатие на клетку не меняет сигнатуру.
+     * Звук воспроизводится только после реального изменения
+     * расположения шашек на доске.
+     */
+    val pieceSignature = board.joinToString("|") { row ->
+        row.joinToString(",") { cell ->
+            cell.piece?.let { piece ->
+                "${piece.color}:${piece.type}"
+            } ?: "-"
+        }
+    }
+
+    var previousPieceSignature by remember {
+        mutableStateOf(pieceSignature)
+    }
+
+    LaunchedEffect(pieceSignature) {
+        if (pieceSignature != previousPieceSignature) {
+            previousPieceSignature = pieceSignature
+
+            if (soundEnabled) {
+                try {
+                    WoodenMoveSound.play()
+                } catch (_: Exception) {
+                    // Ошибка воспроизведения не останавливает игру.
+                }
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -373,10 +369,9 @@ fun CheckersScreen(
                                             vibrationEnabled
                                         )
 
-                                        if (soundEnabled) {
-                                            playGameSound(true)
-                                        }
-
+                                        // Здесь намеренно нет звука.
+                                        // Звук запускается при изменении
+                                        // реального расположения шашек.
                                         viewModel.onCellClicked(
                                             cell.position
                                         )
@@ -470,11 +465,7 @@ fun CheckersScreen(
                 caption = "Подсказка",
                 onClick = {
                     triggerVibration(context, vibrationEnabled)
-                    val found = viewModel.showHint()
-
-                    if (soundEnabled) {
-                        playGameSound(found)
-                    }
+                    viewModel.showHint()
                 }
             )
 
@@ -578,8 +569,6 @@ fun CheckersScreen(
                             prefs.edit()
                                 .putBoolean("sound_enabled", it)
                                 .apply()
-
-                            if (it) playGameSound(true)
                         }
                     )
 
@@ -1205,7 +1194,7 @@ fun UltraHD3DPieceView(
                                 Color(0xFFFFF1A8),
                                 Color(0xFFD99A10)
                             ),
-            radius = radius * 0.12f
+                            radius = radius * 0.12f
                         ),
                         radius = radius * 0.055f,
                         center = Offset(jewelX, jewelY)
