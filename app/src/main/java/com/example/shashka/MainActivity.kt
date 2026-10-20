@@ -42,10 +42,56 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 
-private val BackgroundColor = Color(0xFF141414)
-private val PanelColor = Color(0xFF242424)
-private val GoldColor = Color(0xFFF4C430)
-private val TextColor = Color(0xFFE8DCC6)
+// ============================================================
+// ТЕМЫ ОФОРМЛЕНИЯ
+// gold = Obsidian Gold
+// neon = Cyber Neon
+// ruby = Ruby Diamond
+// ============================================================
+
+private var activeTheme by mutableStateOf("gold")
+
+private val BackgroundColor: Color
+    get() = when (activeTheme) {
+        "neon" -> Color(0xFF080D1D)
+        "ruby" -> Color(0xFF18080D)
+        else -> Color(0xFF141414)
+    }
+
+private val PanelColor: Color
+    get() = when (activeTheme) {
+        "neon" -> Color(0xFF111D35)
+        "ruby" -> Color(0xFF301019)
+        else -> Color(0xFF242424)
+    }
+
+private val GoldColor: Color
+    get() = when (activeTheme) {
+        "neon" -> Color(0xFF00E5FF)
+        "ruby" -> Color(0xFFFF3155)
+        else -> Color(0xFFF4C430)
+    }
+
+private val TextColor: Color
+    get() = when (activeTheme) {
+        "neon" -> Color(0xFFD8F7FF)
+        "ruby" -> Color(0xFFFFE4EA)
+        else -> Color(0xFFE8DCC6)
+    }
+
+private val ActivePanelColor: Color
+    get() = when (activeTheme) {
+        "neon" -> Color(0xFF122A43)
+        "ruby" -> Color(0xFF421523)
+        else -> Color(0xFF29251B)
+    }
+
+private val BorderColor: Color
+    get() = when (activeTheme) {
+        "neon" -> Color(0xFF087C9B)
+        "ruby" -> Color(0xFF8C2940)
+        else -> Color(0xFF414141)
+    }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -161,6 +207,20 @@ fun CheckersScreen(
         )
     }
 
+    var currentTheme by remember {
+        mutableStateOf(
+            prefs.getString("board_theme", "gold") ?: "gold"
+        )
+    }
+
+    LaunchedEffect(currentTheme) {
+        activeTheme = currentTheme
+
+        prefs.edit()
+            .putString("board_theme", currentTheme)
+            .apply()
+    }
+
     var showSettingsDialog by remember {
         mutableStateOf(false)
     }
@@ -182,6 +242,8 @@ fun CheckersScreen(
     }
 
     LaunchedEffect(Unit) {
+        activeTheme = currentTheme
+
         val savedDifficulty = prefs.getString(
             "ai_difficulty",
             "Непобедимый"
@@ -268,7 +330,7 @@ fun CheckersScreen(
                         currentPlayer == PlayerColor.WHITE -> "Ваш ход"
                         else -> "Ход противника"
                     },
-                    color = Color(0xFFBDBDBD),
+                    color = TextColor.copy(alpha = 0.8f),
                     fontSize = 12.sp
                 )
             }
@@ -299,16 +361,34 @@ fun CheckersScreen(
                 .shadow(18.dp, RoundedCornerShape(12.dp))
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF67472B),
-                            Color(0xFF25170D)
-                        )
+                        when (activeTheme) {
+                            "neon" -> listOf(
+                                Color(0xFF00E5FF),
+                                Color(0xFF102A50),
+                                Color(0xFF080D1D)
+                            )
+
+                            "ruby" -> listOf(
+                                Color(0xFFFF3155),
+                                Color(0xFF601528),
+                                Color(0xFF18080D)
+                            )
+
+                            else -> listOf(
+                                Color(0xFF67472B),
+                                Color(0xFF25170D)
+                            )
+                        }
                     ),
                     RoundedCornerShape(12.dp)
                 )
                 .border(
                     4.dp,
-                    Color(0xFF76512E),
+                    when (activeTheme) {
+                        "neon" -> Color(0xFF00E5FF)
+                        "ruby" -> Color(0xFFFF3155)
+                        else -> Color(0xFF76512E)
+                    },
                     RoundedCornerShape(12.dp)
                 )
                 .padding(3.dp)
@@ -332,8 +412,8 @@ fun CheckersScreen(
                             val squareBrush = when {
                                 isSelected -> Brush.linearGradient(
                                     listOf(
-                                        Color(0xFFFFE082),
-                                        Color(0xFFD69B16)
+                                        GoldColor.copy(alpha = 0.85f),
+                                        GoldColor
                                     )
                                 )
 
@@ -345,17 +425,41 @@ fun CheckersScreen(
                                 )
 
                                 isDarkCell -> Brush.verticalGradient(
-                                    listOf(
-                                        Color(0xFF593820),
-                                        Color(0xFF321D10)
-                                    )
+                                    when (activeTheme) {
+                                        "neon" -> listOf(
+                                            Color(0xFF172E62),
+                                            Color(0xFF090F27)
+                                        )
+
+                                        "ruby" -> listOf(
+                                            Color(0xFF8B1733),
+                                            Color(0xFF350B19)
+                                        )
+
+                                        else -> listOf(
+                                            Color(0xFF593820),
+                                            Color(0xFF321D10)
+                                        )
+                                    }
                                 )
 
                                 else -> Brush.verticalGradient(
-                                    listOf(
-                                        Color(0xFFF2E5D5),
-                                        Color(0xFFD4BDA2)
-                                    )
+                                    when (activeTheme) {
+                                        "neon" -> listOf(
+                                            Color(0xFFD8F7FF),
+                                            Color(0xFF7899C8)
+                                        )
+
+                                        "ruby" -> listOf(
+                                            Color(0xFFFFE5EA),
+                                            Color(0xFFD7A4B0)
+                                        )
+
+                                        else -> listOf(
+                                            Color(0xFFF2E5D5),
+                                            Color(0xFFD4BDA2)
+                                        )
+                                    }
                                 )
                             }
 
@@ -414,7 +518,7 @@ fun CheckersScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
-                        color = Color(0xEE1E1E1E),
+                        color = PanelColor.copy(alpha = 0.95f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
@@ -494,7 +598,7 @@ fun CheckersScreen(
             onDismissRequest = {
                 showSettingsDialog = false
             },
-            containerColor = Color(0xFF1E1E1E),
+            containerColor = PanelColor,
             titleContentColor = GoldColor,
             textContentColor = TextColor,
             title = {
@@ -505,9 +609,77 @@ fun CheckersScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 520.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    Text(
+                        text = "ТЕМА ОФОРМЛЕНИЯ",
+                        color = GoldColor,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    listOf(
+                        "gold" to "Obsidian Gold",
+                        "neon" to "Cyber Neon",
+                        "ruby" to "Ruby Diamond"
+                    ).forEach { (themeId, themeName) ->
+                        val selectedTheme = currentTheme == themeId
+
+                        val themeAccent = when (themeId) {
+                            "neon" -> Color(0xFF00E5FF)
+                            "ruby" -> Color(0xFFFF3155)
+                            else -> Color(0xFFF4C430)
+                        }
+
+                        val themeButtonColor = when (themeId) {
+                            "neon" -> Color(0xFF12385A)
+                            "ruby" -> Color(0xFF67182C)
+                            else -> Color(0xFF49371B)
+                        }
+
+                        Button(
+                            onClick = {
+                                currentTheme = themeId
+                                activeTheme = themeId
+
+                                prefs.edit()
+                                    .putString("board_theme", themeId)
+                                    .apply()
+
+                                triggerVibration(
+                                    context,
+                                    vibrationEnabled
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = themeButtonColor,
+                                contentColor = Color.White
+                            ),
+                            border = if (selectedTheme) {
+                                androidx.compose.foundation.BorderStroke(
+                                    2.dp,
+                                    themeAccent
+                                )
+                            } else {
+                                null
+                            }
+                        ) {
+                            Text(
+                                text = if (selectedTheme) {
+                                    "✓ $themeName"
+                                } else {
+                                    themeName
+                                },
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = BorderColor)
+
                     Text(
                         text = "Сложность ИИ",
                         color = GoldColor,
@@ -544,12 +716,12 @@ fun CheckersScreen(
                                         containerColor = if (isSelected) {
                                             GoldColor
                                         } else {
-                                            Color(0xFF303030)
+                                            PanelColor
                                         },
                                         contentColor = if (isSelected) {
                                             Color(0xFF141414)
                                         } else {
-                                            Color.White
+                                            TextColor
                                         }
                                     ),
                                     contentPadding = PaddingValues(
@@ -567,7 +739,7 @@ fun CheckersScreen(
                         }
                     }
 
-                    HorizontalDivider(color = Color(0xFF3A3A3A))
+                    HorizontalDivider(color = BorderColor)
 
                     SettingSwitch(
                         title = "Звуки",
@@ -599,7 +771,7 @@ fun CheckersScreen(
 
                     Text(
                         text = "Контроль времени: 10 минут на каждого игрока.",
-                        color = Color(0xFF999999),
+                        color = TextColor.copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )
 
@@ -638,7 +810,7 @@ fun CheckersScreen(
     gameMessage?.let { message ->
         AlertDialog(
             onDismissRequest = {},
-            containerColor = Color(0xFF1E1E1E),
+            containerColor = PanelColor,
             titleContentColor = GoldColor,
             textContentColor = TextColor,
             title = {
@@ -679,7 +851,7 @@ private fun PanelButton(
             .background(PanelColor, RoundedCornerShape(12.dp))
             .border(
                 1.dp,
-                Color(0xFF414141),
+                BorderColor,
                 RoundedCornerShape(12.dp)
             )
             .clickable { onClick() },
@@ -706,14 +878,14 @@ private fun PlayerPanel(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isActive) Color(0xFF29251B)
-                else Color(0xFF1C1C1C),
+                if (isActive) ActivePanelColor
+                else PanelColor.copy(alpha = 0.75f),
                 RoundedCornerShape(12.dp)
             )
             .border(
                 width = if (isActive) 1.dp else 0.5.dp,
                 color = if (isActive) GoldColor
-                else Color(0xFF333333),
+                else BorderColor,
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -759,14 +931,14 @@ private fun PlayerPanel(
             Column {
                 Text(
                     text = title,
-                    color = if (isActive) GoldColor else Color.White,
+                    color = if (isActive) GoldColor else TextColor,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
                     text = subtitle,
-                    color = Color(0xFF999999),
+                    color = TextColor.copy(alpha = 0.65f),
                     fontSize = 10.sp
                 )
             }
@@ -774,7 +946,7 @@ private fun PlayerPanel(
 
         Text(
             text = clock,
-            color = if (isActive) GoldColor else Color(0xFFB0B0B0),
+            color = if (isActive) GoldColor else TextColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -803,7 +975,7 @@ private fun SettingSwitch(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = GoldColor,
-                checkedTrackColor = Color(0xFF78601B)
+                checkedTrackColor = ActivePanelColor
             )
         )
     }
@@ -826,7 +998,7 @@ fun BottomIconButton(
                 .background(PanelColor, RoundedCornerShape(15.dp))
                 .border(
                     1.dp,
-                    Color(0xFF414141),
+                    BorderColor,
                     RoundedCornerShape(15.dp)
                 )
                 .clickable { onClick() },
@@ -842,7 +1014,7 @@ fun BottomIconButton(
         if (caption.isNotEmpty()) {
             Text(
                 text = caption,
-                color = Color(0xFF999999),
+                color = TextColor.copy(alpha = 0.65f),
                 fontSize = 9.sp
             )
         }
