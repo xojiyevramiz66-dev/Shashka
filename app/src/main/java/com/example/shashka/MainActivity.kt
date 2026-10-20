@@ -1205,4 +1205,13 @@ fun UltraHD3DPieceView(
                                 Color(0xFFFFF1A8),
                                 Color(0xFFD99A10)
                             ),
-            
+            radius = radius * 0.12f
+                        ),
+                        radius = radius * 0.055f,
+                        center = Offset(jewelX, jewelY)
+                    )
+                }
+            }
+        }
+    }
+}
