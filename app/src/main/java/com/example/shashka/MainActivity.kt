@@ -3,7 +3,6 @@ package com.example.shashka
 import android.app.Activity
 import android.content.Context
 import android.os.Build
-import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -43,7 +42,7 @@ private val GoldColor = Color(0xFFF4C430)
 private val TextColor = Color(0xFFE8DCC6)
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -101,7 +100,6 @@ private fun formatClock(seconds: Int): String {
     val safeSeconds = seconds.coerceAtLeast(0)
     val minutes = safeSeconds / 60
     val remainingSeconds = safeSeconds % 60
-
     return "%02d:%02d".format(minutes, remainingSeconds)
 }
 
@@ -144,13 +142,6 @@ fun CheckersScreen(
         mutableIntStateOf(prefs.getInt("black_seconds", 600))
     }
 
-    /*
-     * ЗАПОМИНАЕМ РАСПОЛОЖЕНИЕ ШАШЕК.
-     *
-     * Простое нажатие на клетку не меняет сигнатуру.
-     * Звук воспроизводится только после реального изменения
-     * расположения шашек на доске.
-     */
     val pieceSignature = board.joinToString("|") { row ->
         row.joinToString(",") { cell ->
             cell.piece?.let { piece ->
@@ -171,7 +162,7 @@ fun CheckersScreen(
                 try {
                     WoodenMoveSound.play()
                 } catch (_: Exception) {
-                    // Ошибка воспроизведения не останавливает игру.
+                    // Ошибка звука не останавливает игру.
                 }
             }
         }
@@ -278,6 +269,13 @@ fun CheckersScreen(
             )
         }
 
+        // НОВОЕ: звание и рейтинг игрока
+        RankSection(
+            gameMessage = gameMessage,
+            difficulty = viewModel.aiDifficulty,
+            prefs = prefs
+        )
+
         PlayerPanel(
             title = "ПРОТИВНИК",
             subtitle = "ИИ • ${viewModel.aiDifficulty}",
@@ -369,9 +367,6 @@ fun CheckersScreen(
                                             vibrationEnabled
                                         )
 
-                                        // Здесь намеренно нет звука.
-                                        // Звук запускается при изменении
-                                        // реального расположения шашек.
                                         viewModel.onCellClicked(
                                             cell.position
                                         )
@@ -654,9 +649,7 @@ fun CheckersScreen(
             }
         )
     }
-}
-
-@Composable
+} @Composable
 private fun PanelButton(
     text: String,
     onClick: () -> Unit
@@ -866,8 +859,8 @@ fun AnimatedPieceWrapper(piece: CheckerPiece) {
 }
 
 /**
- * Объёмные шашки: затенённая боковая стенка,
- * полированная верхняя поверхность и золотая корона.
+ * Объёмные шашки с тенями, металлическим ободком
+ * и золотой короной у дамки.
  */
 @Composable
 fun UltraHD3DPieceView(
@@ -889,7 +882,7 @@ fun UltraHD3DPieceView(
                 size.height / 2f
             )
 
-            // Мягкая тень под фишкой
+            // Тень
             drawOval(
                 color = Color.Black.copy(alpha = 0.52f),
                 topLeft = Offset(
@@ -902,7 +895,7 @@ fun UltraHD3DPieceView(
                 )
             )
 
-            // Толстая боковая стенка
+            // Боковая стенка
             val sideBrush = if (isWhite) {
                 Brush.verticalGradient(
                     colors = listOf(
@@ -939,7 +932,7 @@ fun UltraHD3DPieceView(
                 )
             )
 
-            // Нижний металлический кант
+            // Нижний ободок
             drawCircle(
                 brush = Brush.verticalGradient(
                     colors = if (isWhite) {
@@ -963,12 +956,12 @@ fun UltraHD3DPieceView(
                 )
             )
 
-            // Верхняя поверхность приподнята над боковой стенкой
             val faceCenter = center - Offset(
                 0f,
                 radius * 0.20f
             )
 
+            // Верхняя поверхность
             val faceBrush = if (isWhite) {
                 Brush.radialGradient(
                     colors = listOf(
@@ -1049,7 +1042,7 @@ fun UltraHD3DPieceView(
                 style = Stroke(width = radius * 0.035f)
             )
 
-            // Внутренние кольца
+            // Внутреннее кольцо
             drawCircle(
                 color = if (isWhite) {
                     Color(0xFFC6A579)
@@ -1086,7 +1079,7 @@ fun UltraHD3DPieceView(
                 center = faceCenter
             )
 
-            // Отражение света на поверхности
+            // Отражение света
             drawOval(
                 color = Color.White.copy(
                     alpha = if (isWhite) 0.48f else 0.19f
@@ -1101,6 +1094,7 @@ fun UltraHD3DPieceView(
                 )
             )
 
+            // Корона дамки
             if (piece.type == PieceType.KING) {
                 val crownCenter = faceCenter - Offset(
                     0f,
@@ -1142,13 +1136,11 @@ fun UltraHD3DPieceView(
                     close()
                 }
 
-                // Тень короны
                 drawPath(
                     path = crownPath,
                     color = Color.Black.copy(alpha = 0.65f)
                 )
 
-                // Золотая поверхность короны
                 drawPath(
                     path = crownPath,
                     brush = Brush.verticalGradient(
@@ -1169,7 +1161,7 @@ fun UltraHD3DPieceView(
                     style = Stroke(width = radius * 0.045f)
                 )
 
-                // Три сияющих камня на короне
+                // Три камня короны
                 listOf(
                     crownCenter.x - crownWidth * 0.42f,
                     crownCenter.x,
