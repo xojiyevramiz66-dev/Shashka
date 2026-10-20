@@ -302,7 +302,6 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                 Button(
                                     onClick = { 
                                         viewModel.aiDifficulty = level
-                                        // Сохраняем сложность в память устройства
                                         prefs.edit().putString("ai_difficulty", level).apply()
                                         triggerVibration(context, vibrationEnabled)
                                     },
@@ -357,6 +356,30 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4C430), contentColor = Color(0xFF141414))
                 ) {
                     Text(text = "Применить", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Диалоговое окно окончания игры (Победа / Поражение)
+    viewModel.gameMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = {},
+            containerColor = Color(0xFF1E1E1E),
+            titleContentColor = Color(0xFFFFD54F),
+            textContentColor = Color(0xFFDDDDDD),
+            title = {
+                Text(text = "🏁 Игра окончена", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            },
+            text = {
+                Text(text = message, fontSize = 16.sp)
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.undo() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4C430), contentColor = Color(0xFF141414))
+                ) {
+                    Text(text = "Ок", fontWeight = FontWeight.Bold)
                 }
             }
         )
