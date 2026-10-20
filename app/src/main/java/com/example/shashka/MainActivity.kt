@@ -1,5 +1,7 @@
+
 package com.example.shashka
 
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -50,21 +52,40 @@ class MainActivity : ComponentActivity() {
 
 fun triggerVibration(context: Context, enabled: Boolean) {
     if (!enabled) return
+
     try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator.vibrate(VibrationEffect.createOneShot(30L, VibrationEffect.DEFAULT_AMPLITUDE))
+            val manager = context.getSystemService(
+                Context.VIBRATOR_MANAGER_SERVICE
+            ) as VibratorManager
+
+            manager.defaultVibrator.vibrate(
+                VibrationEffect.createOneShot(
+                    30L,
+                    VibrationEffect.DEFAULT_AMPLITUDE
+                )
+            )
         } else {
             @Suppress("DEPRECATION")
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            val vibrator = context.getSystemService(
+                Context.VIBRATOR_SERVICE
+            ) as Vibrator
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(30L, VibrationEffect.DEFAULT_AMPLITUDE))
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(
+                        30L,
+                        VibrationEffect.DEFAULT_AMPLITUDE
+                    )
+                )
             } else {
                 @Suppress("DEPRECATION")
                 vibrator.vibrate(30L)
             }
         }
-    } catch (e: Exception) {}
+    } catch (_: Exception) {
+        // Вибрация необязательна: игра должна работать и без неё.
+    }
 }
 
 @Composable
@@ -73,12 +94,22 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
     val board = viewModel.boardState
     val selected = viewModel.selectedPosition
     val currentPlayer = viewModel.currentPlayer
+    val isAiThinking = viewModel.isAiThinking
+    val gameMessage = viewModel.gameMessage
 
-    val prefs = remember { context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE) }
+    val prefs = remember {
+        context.getSharedPreferences(
+            "game_prefs",
+            Context.MODE_PRIVATE
+        )
+    }
 
-    // Загружаем сохраненную сложность при старте
     LaunchedEffect(Unit) {
-        val savedDifficulty = prefs.getString("ai_difficulty", "Непобедимый")
+        val savedDifficulty = prefs.getString(
+            "ai_difficulty",
+            "Непобедимый"
+        )
+
         if (savedDifficulty != null) {
             viewModel.aiDifficulty = savedDifficulty
         }
@@ -107,15 +138,36 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                 modifier = Modifier
                     .size(42.dp)
                     .shadow(6.dp, RoundedCornerShape(12.dp))
-                    .background(Color(0xFF262626), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp)),
+                    .background(
+                        Color(0xFF262626),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        1.dp,
+                        Color(0xFF3D3D3D),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .clickable {
+                        triggerVibration(context, vibrationEnabled)
+                        (context as? Activity)?.finish()
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "←", color = Color(0xFF888888), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "←",
+                    color = Color(0xFF888888),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Text(
-                text = if (currentPlayer == PlayerColor.WHITE) "Ваш ход" else "Ход противника",
+                text = when {
+                    gameMessage != null -> "Игра окончена"
+                    isAiThinking -> "ИИ думает…"
+                    currentPlayer == PlayerColor.WHITE -> "Ваш ход"
+                    else -> "Ход противника"
+                },
                 color = Color(0xFFF5F5F5),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
@@ -125,11 +177,18 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                 modifier = Modifier
                     .size(42.dp)
                     .shadow(6.dp, RoundedCornerShape(12.dp))
-                    .background(Color(0xFF262626), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFF3D3D3D), RoundedCornerShape(12.dp))
-                    .clickable { 
+                    .background(
+                        Color(0xFF262626),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        1.dp,
+                        Color(0xFF3D3D3D),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .clickable {
                         triggerVibration(context, vibrationEnabled)
-                        showSettingsDialog = true 
+                        showSettingsDialog = true
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -157,22 +216,46 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         modifier = Modifier
                             .size(20.dp)
                             .background(
-                                Brush.radialGradient(listOf(Color(0xFF4A4A4A), Color(0xFF111111))),
+                                Brush.radialGradient(
+                                    listOf(
+                                        Color(0xFF4A4A4A),
+                                        Color(0xFF111111)
+                                    )
+                                ),
                                 CircleShape
                             )
-                            .border(1.dp, Color(0xFF888888), CircleShape)
+                            .border(
+                                1.dp,
+                                Color(0xFF888888),
+                                CircleShape
+                            )
                     )
                 }
+
                 Spacer(modifier = Modifier.width(10.dp))
+
                 Column {
-                    Text(text = "Противник", color = Color(0xFF888888), fontSize = 15.sp)
-                    Text(text = "Сложность: ${viewModel.aiDifficulty}", color = Color(0xFFF4C430), fontSize = 11.sp)
+                    Text(
+                        text = "Противник",
+                        color = Color(0xFF888888),
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = "Сложность: ${viewModel.aiDifficulty}",
+                        color = Color(0xFFF4C430),
+                        fontSize = 11.sp
+                    )
                 }
             }
-            Text(text = "09:45", color = Color(0xFF666666), fontSize = 15.sp)
+
+            Text(
+                text = "09:45",
+                color = Color(0xFF666666),
+                fontSize = 15.sp
+            )
         }
 
-        // Ультра-качественная игровая доска
+        // Игровая доска
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -180,11 +263,18 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                 .shadow(24.dp, RoundedCornerShape(14.dp))
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color(0xFF5A3E26), Color(0xFF231409))
+                        colors = listOf(
+                            Color(0xFF5A3E26),
+                            Color(0xFF231409)
+                        )
                     ),
                     shape = RoundedCornerShape(14.dp)
                 )
-                .border(5.dp, Color(0xFF352011), RoundedCornerShape(14.dp))
+                .border(
+                    5.dp,
+                    Color(0xFF352011),
+                    RoundedCornerShape(14.dp)
+                )
                 .padding(3.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -192,14 +282,41 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     Row(modifier = Modifier.weight(1f)) {
                         for (col in 0..7) {
                             val cell = board[row][col]
-                            val isSelected = selected?.row == row && selected?.col == col
-                            
-                            val isDarkCell = (row + col) % 2 != 0
+                            val isSelected =
+                                selected?.row == row &&
+                                selected.col == col
+
+                            val isDarkCell =
+                                (row + col) % 2 != 0
+
                             val cellBackground = when {
-                                isSelected -> Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFE5A912)))
-                                cell.isHighlighted -> Brush.linearGradient(listOf(Color(0xFF81D4FA), Color(0xFF29B6F6)))
-                                isDarkCell -> Brush.verticalGradient(listOf(Color(0xFF482D1B), Color(0xFF2C190D)))
-                                else -> Brush.verticalGradient(listOf(Color(0xFFF2E6D8), Color(0xFFD6C0A8)))
+                                isSelected -> Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFFFFD54F),
+                                        Color(0xFFE5A912)
+                                    )
+                                )
+
+                                cell.isHighlighted -> Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF81D4FA),
+                                        Color(0xFF29B6F6)
+                                    )
+                                )
+
+                                isDarkCell -> Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF482D1B),
+                                        Color(0xFF2C190D)
+                                    )
+                                )
+
+                                else -> Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFFF2E6D8),
+                                        Color(0xFFD6C0A8)
+                                    )
+                                )
                             }
 
                             Box(
@@ -207,9 +324,14 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .background(cellBackground)
-                                    .clickable { 
-                                        triggerVibration(context, vibrationEnabled)
-                                        viewModel.onCellClicked(cell.position) 
+                                    .clickable {
+                                        triggerVibration(
+                                            context,
+                                            vibrationEnabled
+                                        )
+                                        viewModel.onCellClicked(
+                                            cell.position
+                                        )
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -236,45 +358,74 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                     modifier = Modifier
                         .size(38.dp)
                         .background(Color(0xFFEADBCE), CircleShape)
-                        .border(2.dp, Color(0xFFF4C430), CircleShape),
+                        .border(
+                            2.dp,
+                            Color(0xFFF4C430),
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(text = "👑", fontSize = 16.sp)
                 }
+
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Вы", color = Color(0xFFEEEEEE), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+
+                Text(
+                    text = "Вы",
+                    color = Color(0xFFEEEEEE),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            Text(text = "09:52", color = Color(0xFF666666), fontSize = 15.sp)
+
+            Text(
+                text = "09:52",
+                color = Color(0xFF666666),
+                fontSize = 15.sp
+            )
         }
 
-        // Нижние кнопки управления
+        // Нижние кнопки: отмена, новая игра, подсказка и меню
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .shadow(6.dp, RoundedCornerShape(16.dp))
-                    .background(Color(0xFF242424), RoundedCornerShape(16.dp))
-                    .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp))
-                    .clickable { 
-                        triggerVibration(context, vibrationEnabled)
-                        viewModel.undo()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "↩", color = Color(0xFFDDDDDD), fontSize = 20.sp)
-            }
+            BottomIconButton(
+                icon = "↩",
+                onClick = {
+                    triggerVibration(context, vibrationEnabled)
+                    viewModel.undo()
+                }
+            )
 
-            BottomIconButton(icon = "💡", onClick = { triggerVibration(context, vibrationEnabled) })
-            BottomIconButton(icon = "☰", onClick = { triggerVibration(context, vibrationEnabled) })
+            BottomIconButton(
+                icon = "🔄",
+                onClick = {
+                    triggerVibration(context, vibrationEnabled)
+                    viewModel.restartGame()
+                }
+            )
+
+            BottomIconButton(
+                icon = "💡",
+                onClick = {
+                    triggerVibration(context, vibrationEnabled)
+                }
+            )
+
+            BottomIconButton(
+                icon = "☰",
+                onClick = {
+                    triggerVibration(context, vibrationEnabled)
+                    showSettingsDialog = true
+                }
+            )
         }
     }
 
-    // Диалоговое окно настроек
+    // Диалог настроек
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -282,7 +433,11 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             titleContentColor = Color(0xFFFFD54F),
             textContentColor = Color(0xFFDDDDDD),
             title = {
-                Text(text = "⚙️ Настройки игры", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(
+                    text = "⚙️ Настройки игры",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
             },
             text = {
                 Column(
@@ -291,27 +446,71 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         .padding(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(text = "Сложность ИИ", color = Color(0xFFF4C430), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Row(
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Сложность ИИ",
+                            color = Color(0xFFF4C430),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            listOf("Лёгкий", "Средний", "Непобедимый").forEach { level ->
-                                val isSelected = viewModel.aiDifficulty == level
-                                Button(
-                                    onClick = { 
-                                        viewModel.aiDifficulty = level
-                                        prefs.edit().putString("ai_difficulty", level).apply()
-                                        triggerVibration(context, vibrationEnabled)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isSelected) Color(0xFFF4C430) else Color(0xFF2C2C2C),
-                                        contentColor = if (isSelected) Color(0xFF141414) else Color(0xFFDDDDDD)
-                                    ),
-                                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                            listOf(
+                                listOf("Лёгкий", "Средний"),
+                                listOf("Сильный", "Непобедимый")
+                            ).forEach { rowLevels ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Text(text = level, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    rowLevels.forEach { level ->
+                                        val isSelected =
+                                            viewModel.aiDifficulty == level
+
+                                        Button(
+                                            onClick = {
+                                                viewModel.aiDifficulty = level
+                                                prefs.edit()
+                                                    .putString(
+                                                        "ai_difficulty",
+                                                        level
+                                                    )
+                                                    .apply()
+
+                                                triggerVibration(
+                                                    context,
+                                                    vibrationEnabled
+                                                )
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor =
+                                                    if (isSelected) {
+                                                        Color(0xFFF4C430)
+                                                    } else {
+                                                        Color(0xFF2C2C2C)
+                                                    },
+                                                contentColor =
+                                                    if (isSelected) {
+                                                        Color(0xFF141414)
+                                                    } else {
+                                                        Color(0xFFDDDDDD)
+                                                    }
+                                            ),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                text = level,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -322,14 +521,24 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Звуки", color = Color(0xFFE8DCC6), fontSize = 15.sp)
+                        Text(
+                            text = "Звуки",
+                            color = Color(0xFFE8DCC6),
+                            fontSize = 15.sp
+                        )
+
                         Switch(
                             checked = soundEnabled,
-                            onCheckedChange = { 
+                            onCheckedChange = {
                                 soundEnabled = it
-                                triggerVibration(context, vibrationEnabled)
+                                triggerVibration(
+                                    context,
+                                    vibrationEnabled
+                                )
                             },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFF4C430))
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color(0xFFF4C430)
+                            )
                         )
                     }
 
@@ -338,14 +547,21 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Вибрация", color = Color(0xFFE8DCC6), fontSize = 15.sp)
+                        Text(
+                            text = "Вибрация",
+                            color = Color(0xFFE8DCC6),
+                            fontSize = 15.sp
+                        )
+
                         Switch(
                             checked = vibrationEnabled,
-                            onCheckedChange = { 
+                            onCheckedChange = {
                                 vibrationEnabled = it
                                 triggerVibration(context, it)
                             },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFF4C430))
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color(0xFFF4C430)
+                            )
                         )
                     }
                 }
@@ -353,33 +569,49 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
             confirmButton = {
                 Button(
                     onClick = { showSettingsDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4C430), contentColor = Color(0xFF141414))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF4C430),
+                        contentColor = Color(0xFF141414)
+                    )
                 ) {
-                    Text(text = "Применить", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Применить",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         )
     }
 
-    // Диалоговое окно окончания игры (Победа / Поражение)
-    viewModel.gameMessage?.let { message ->
+    // Диалог окончания игры
+    gameMessage?.let { message ->
         AlertDialog(
             onDismissRequest = {},
             containerColor = Color(0xFF1E1E1E),
             titleContentColor = Color(0xFFFFD54F),
             textContentColor = Color(0xFFDDDDDD),
             title = {
-                Text(text = "🏁 Игра окончена", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(
+                    text = "🏁 Игра окончена",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
             },
             text = {
                 Text(text = message, fontSize = 16.sp)
             },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.undo() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF4C430), contentColor = Color(0xFF141414))
+                    onClick = { viewModel.restartGame() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF4C430),
+                        contentColor = Color(0xFF141414)
+                    )
                 ) {
-                    Text(text = "Ок", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Новая игра",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         )
@@ -387,17 +619,31 @@ fun CheckersScreen(viewModel: CheckersViewModel = viewModel()) {
 }
 
 @Composable
-fun BottomIconButton(icon: String, onClick: () -> Unit = {}) {
+fun BottomIconButton(
+    icon: String,
+    onClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .size(54.dp)
             .shadow(6.dp, RoundedCornerShape(16.dp))
-            .background(Color(0xFF242424), RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0xFF383838), RoundedCornerShape(16.dp))
+            .background(
+                Color(0xFF242424),
+                RoundedCornerShape(16.dp)
+            )
+            .border(
+                1.dp,
+                Color(0xFF383838),
+                RoundedCornerShape(16.dp)
+            )
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(text = icon, color = Color(0xFFDDDDDD), fontSize = 20.sp)
+        Text(
+            text = icon,
+            color = Color(0xFFDDDDDD),
+            fontSize = 20.sp
+        )
     }
 }
 
@@ -418,7 +664,9 @@ fun AnimatedPieceWrapper(piece: CheckerPiece) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(all = (0.82f * (1f - scale.value) * 10).dp),
+            .padding(
+                all = (0.82f * (1f - scale.value) * 10).dp
+            ),
         contentAlignment = Alignment.Center
     ) {
         UltraHD3DPieceView(piece = piece)
@@ -430,25 +678,34 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
     val isWhite = piece.color == PlayerColor.WHITE
 
     Canvas(
-        modifier = Modifier
-            .fillMaxSize(0.82f)
+        modifier = Modifier.fillMaxSize(0.82f)
     ) {
         val radius = size.minDimension / 2f
-        val center = Offset(size.width / 2f, size.height / 2f)
+        val center = Offset(
+            size.width / 2f,
+            size.height / 2f
+        )
 
-        // 1. Глубокая многослойная мягкая тень (создает эффект высоты фишки над доской)
+        // Многослойная тень
         drawCircle(
             color = Color.Black.copy(alpha = 0.35f),
             radius = radius * 1.02f,
-            center = center + Offset(radius * 0.04f, radius * 0.12f)
+            center = center + Offset(
+                radius * 0.04f,
+                radius * 0.12f
+            )
         )
+
         drawCircle(
             color = Color.Black.copy(alpha = 0.25f),
             radius = radius * 0.98f,
-            center = center + Offset(radius * 0.02f, radius * 0.06f)
+            center = center + Offset(
+                radius * 0.02f,
+                radius * 0.06f
+            )
         )
 
-        // 2. Тело шашки с продвинутым 3D-градиентом освещения сверху
+        // Основное тело шашки
         val bodyBrush = if (isWhite) {
             Brush.radialGradient(
                 colors = listOf(
@@ -458,7 +715,10 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
                     Color(0xFFB39872),
                     Color(0xFF7A613F)
                 ),
-                center = center - Offset(radius * 0.3f, radius * 0.35f),
+                center = center - Offset(
+                    radius * 0.3f,
+                    radius * 0.35f
+                ),
                 radius = radius * 1.4f
             )
         } else {
@@ -470,7 +730,10 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
                     Color(0xFF0A0A0A),
                     Color(0xFF000000)
                 ),
-                center = center - Offset(radius * 0.3f, radius * 0.35f),
+                center = center - Offset(
+                    radius * 0.3f,
+                    radius * 0.35f
+                ),
                 radius = radius * 1.4f
             )
         }
@@ -481,54 +744,82 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             center = center
         )
 
-        // Премиальный глянцевый ободок по краю
         drawCircle(
-            color = if (isWhite) Color(0xFFC7B192) else Color(0xFF9EABB5),
+            color = if (isWhite) {
+                Color(0xFFC7B192)
+            } else {
+                Color(0xFF9EABB5)
+            },
             radius = radius * 0.95f,
             center = center,
             style = Stroke(width = radius * 0.07f)
         )
 
-        // Внутренний световой блик по верхней дуге (имитация отражения студийного света)
         drawCircle(
-            color = Color.White.copy(alpha = if (isWhite) 0.4f else 0.15f),
+            color = Color.White.copy(
+                alpha = if (isWhite) 0.4f else 0.15f
+            ),
             radius = radius * 0.90f,
             center = center - Offset(0f, radius * 0.05f),
             style = Stroke(width = radius * 0.03f)
         )
 
-        // 3. Первая концентрическая ступень (фаска) с теневым углублением
+        // Внешняя ступень
         val outerRingRadius = radius * 0.68f
+
         drawCircle(
-            color = if (isWhite) Color(0xFFFFFFFF) else Color(0xFF555555),
+            color = if (isWhite) {
+                Color(0xFFFFFFFF)
+            } else {
+                Color(0xFF555555)
+            },
             radius = outerRingRadius,
             center = center,
             style = Stroke(width = radius * 0.05f)
         )
-        // Теневой внутренний контур фаски (Ambient Occlusion)
+
         drawCircle(
-            color = if (isWhite) Color(0xFF9E845E) else Color(0xFF0D0D0D),
+            color = if (isWhite) {
+                Color(0xFF9E845E)
+            } else {
+                Color(0xFF0D0D0D)
+            },
             radius = outerRingRadius - radius * 0.035f,
             center = center,
             style = Stroke(width = radius * 0.045f)
         )
 
-        // 4. Внутренняя чаша (центральное углубление)
+        // Центральное углубление
         val innerBrush = if (isWhite) {
             Brush.radialGradient(
-                colors = listOf(Color(0xFFFFFFFF), Color(0xFFE8D7BE), Color(0xFFC2A884)),
-                center = center - Offset(radius * 0.15f, radius * 0.2f),
+                colors = listOf(
+                    Color(0xFFFFFFFF),
+                    Color(0xFFE8D7BE),
+                    Color(0xFFC2A884)
+                ),
+                center = center - Offset(
+                    radius * 0.15f,
+                    radius * 0.2f
+                ),
                 radius = radius * 0.75f
             )
         } else {
             Brush.radialGradient(
-                colors = listOf(Color(0xFF4A4A4A), Color(0xFF222222), Color(0xFF080808)),
-                center = center - Offset(radius * 0.15f, radius * 0.2f),
+                colors = listOf(
+                    Color(0xFF4A4A4A),
+                    Color(0xFF222222),
+                    Color(0xFF080808)
+                ),
+                center = center - Offset(
+                    radius * 0.15f,
+                    radius * 0.2f
+                ),
                 radius = radius * 0.75f
             )
         }
 
         val innerRadius = radius * 0.48f
+
         drawCircle(
             brush = innerBrush,
             radius = innerRadius,
@@ -536,20 +827,23 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
         )
 
         drawCircle(
-            color = if (isWhite) Color(0xFF8F734E) else Color(0xFF030303),
+            color = if (isWhite) {
+                Color(0xFF8F734E)
+            } else {
+                Color(0xFF030303)
+            },
             radius = innerRadius,
             center = center,
             style = Stroke(width = radius * 0.035f)
         )
 
-        // 5. Корона высшего качества для дамок (KING)
         if (piece.type == PieceType.KING) {
             val crownWidth = radius * 0.68f
             val crownHeight = radius * 0.48f
             val left = center.x - crownWidth / 2f
-            val top = center.y - crownHeight / 2f + radius * 0.04f
+            val top = center.y - crownHeight / 2f +
+                radius * 0.04f
 
-            // Роскошный золотой градиент с зеркальным переливом
             val crownBrush = Brush.verticalGradient(
                 colors = listOf(
                     Color(0xFFFFF8E1),
@@ -562,66 +856,134 @@ fun UltraHD3DPieceView(piece: CheckerPiece) {
             )
 
             val crownPath = Path().apply {
-                moveTo(left + crownWidth * 0.06f, top + crownHeight)
-                lineTo(left + crownWidth * 0.94f, top + crownHeight)
-                lineTo(left + crownWidth, top + crownHeight * 0.16f)
-                lineTo(left + crownWidth * 0.72f, top + crownHeight * 0.55f)
-                lineTo(left + crownWidth * 0.5f, top - crownHeight * 0.08f)
-                lineTo(left + crownWidth * 0.28f, top + crownHeight * 0.55f)
-                lineTo(left, top + crownHeight * 0.16f)
+                moveTo(
+                    left + crownWidth * 0.06f,
+                    top + crownHeight
+                )
+                lineTo(
+                    left + crownWidth * 0.94f,
+                    top + crownHeight
+                )
+                lineTo(
+                    left + crownWidth,
+                    top + crownHeight * 0.16f
+                )
+                lineTo(
+                    left + crownWidth * 0.72f,
+                    top + crownHeight * 0.55f
+                )
+                lineTo(
+                    left + crownWidth * 0.5f,
+                    top - crownHeight * 0.08f
+                )
+                lineTo(
+                    left + crownWidth * 0.28f,
+                    top + crownHeight * 0.55f
+                )
+                lineTo(
+                    left,
+                    top + crownHeight * 0.16f
+                )
                 close()
             }
 
-            // Тень под короной для максимального объема
             drawPath(
                 path = crownPath,
                 color = Color.Black.copy(alpha = 0.4f)
             )
 
-            // Основная заливка короны
-            drawPath(path = crownPath, brush = crownBrush)
-            
-            // Четкий контур короны
+            drawPath(
+                path = crownPath,
+                brush = crownBrush
+            )
+
             drawPath(
                 path = crownPath,
                 color = Color(0xFF795548),
                 style = Stroke(width = radius * 0.03f)
             )
 
-            // Жемчужные шарики на вершинах зубцов с зеркальным бликом
             val ballRadius = radius * 0.06f
             val ballColor = Color(0xFFFFFFFF)
             val ballStroke = Color(0xFF8C6D14)
 
-            // Левый шарик
-            val leftBallCenter = Offset(left, top + crownHeight * 0.16f)
-            drawCircle(color = ballColor, radius = ballRadius, center = leftBallCenter)
-            drawCircle(color = ballStroke, radius = ballRadius, center = leftBallCenter, style = Stroke(width = 1.5f))
+            val leftBallCenter = Offset(
+                left,
+                top + crownHeight * 0.16f
+            )
 
-            // Центральный шарик (выше остальных)
-            val centerBallCenter = Offset(left + crownWidth * 0.5f, top - crownHeight * 0.08f)
-            drawCircle(color = ballColor, radius = ballRadius * 1.15f, center = centerBallCenter)
-            drawCircle(color = ballStroke, radius = ballRadius * 1.15f, center = centerBallCenter, style = Stroke(width = 1.5f))
+            drawCircle(
+                color = ballColor,
+                radius = ballRadius,
+                center = leftBallCenter
+            )
 
-            // Правый шарик
-            val rightBallCenter = Offset(left + crownWidth, top + crownHeight * 0.16f)
-            drawCircle(color = ballColor, radius = ballRadius, center = rightBallCenter)
-            drawCircle(color = ballStroke, radius = ballRadius, center = rightBallCenter, style = Stroke(width = 1.5f))
+            drawCircle(
+                color = ballStroke,
+                radius = ballRadius,
+                center = leftBallCenter,
+                style = Stroke(width = 1.5f)
+            )
 
-            // Декоративная линия основания короны
+            val centerBallCenter = Offset(
+                left + crownWidth * 0.5f,
+                top - crownHeight * 0.08f
+            )
+
+            drawCircle(
+                color = ballColor,
+                radius = ballRadius * 1.15f,
+                center = centerBallCenter
+            )
+
+            drawCircle(
+                color = ballStroke,
+                radius = ballRadius * 1.15f,
+                center = centerBallCenter,
+                style = Stroke(width = 1.5f)
+            )
+
+            val rightBallCenter = Offset(
+                left + crownWidth,
+                top + crownHeight * 0.16f
+            )
+
+            drawCircle(
+                color = ballColor,
+                radius = ballRadius,
+                center = rightBallCenter
+            )
+
+            drawCircle(
+                color = ballStroke,
+                radius = ballRadius,
+                center = rightBallCenter,
+                style = Stroke(width = 1.5f)
+            )
+
             val baseLinePath = Path().apply {
-                moveTo(left + crownWidth * 0.14f, top + crownHeight * 0.82f)
-                lineTo(left + crownWidth * 0.86f, top + crownHeight * 0.82f)
+                moveTo(
+                    left + crownWidth * 0.14f,
+                    top + crownHeight * 0.82f
+                )
+                lineTo(
+                    left + crownWidth * 0.86f,
+                    top + crownHeight * 0.82f
+                )
             }
+
             drawPath(
                 path = baseLinePath,
                 color = Color(0xFF5D4037),
                 style = Stroke(width = radius * 0.04f)
             )
         } else {
-            // Элегантный внутренний круговой акцент для обычной шашки
             drawCircle(
-                color = if (isWhite) Color(0xFFFFFFFF).copy(alpha = 0.8f) else Color(0xFF888888),
+                color = if (isWhite) {
+                    Color(0xFFFFFFFF).copy(alpha = 0.8f)
+                } else {
+                    Color(0xFF888888)
+                },
                 radius = radius * 0.22f,
                 center = center,
                 style = Stroke(width = radius * 0.035f)
