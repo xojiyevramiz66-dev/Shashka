@@ -42,67 +42,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 
-// ============================================================
-// SHASHKA ULTRA HD
-// Темы:
-// gold = Obsidian Gold
-// neon = Cyber Neon
-// ruby = Ruby Diamond
-// ============================================================
-
-private var activeTheme by mutableStateOf("gold")
-
-private val BackgroundColor: Color
-    get() = when (activeTheme) {
-        "neon" -> Color(0xFF080D1D)
-        "ruby" -> Color(0xFF18080D)
-        else -> Color(0xFF141414)
-    }
-
-private val PanelColor: Color
-    get() = when (activeTheme) {
-        "neon" -> Color(0xFF111D35)
-        "ruby" -> Color(0xFF301019)
-        else -> Color(0xFF242424)
-    }
-
-private val GoldColor: Color
-    get() = when (activeTheme) {
-        "neon" -> Color(0xFF00E5FF)
-        "ruby" -> Color(0xFFFF3155)
-        else -> Color(0xFFF4C430)
-    }
-
-private val TextColor: Color
-    get() = when (activeTheme) {
-        "neon" -> Color(0xFFD8F7FF)
-        "ruby" -> Color(0xFFFFE4EA)
-        else -> Color(0xFFE8DCC6)
-    }
-
-private val ActivePanelColor: Color
-    get() = when (activeTheme) {
-        "neon" -> Color(0xFF122A43)
-        "ruby" -> Color(0xFF421523)
-        else -> Color(0xFF29251B)
-    }
-
-private val BorderColor: Color
-    get() = when (activeTheme) {
-        "neon" -> Color(0xFF087C9B)
-        "ruby" -> Color(0xFF8C2940)
-        else -> Color(0xFF414141)
-    }
+private val BackgroundColor = Color(0xFF141414)
+private val PanelColor = Color(0xFF242424)
+private val GoldColor = Color(0xFFF4C430)
+private val TextColor = Color(0xFFE8DCC6)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val prefs = getSharedPreferences(
-            "game_prefs",
-            Context.MODE_PRIVATE
-        )
-        activeTheme = prefs.getString("board_theme", "gold") ?: "gold"
 
         setContent {
             MaterialTheme {
@@ -214,20 +161,6 @@ fun CheckersScreen(
         )
     }
 
-    var currentTheme by remember {
-        mutableStateOf(
-            prefs.getString("board_theme", "gold") ?: "gold"
-        )
-    }
-
-    LaunchedEffect(currentTheme) {
-        activeTheme = currentTheme
-
-        prefs.edit()
-            .putString("board_theme", currentTheme)
-            .apply()
-    }
-
     var showSettingsDialog by remember {
         mutableStateOf(false)
     }
@@ -249,8 +182,6 @@ fun CheckersScreen(
     }
 
     LaunchedEffect(Unit) {
-        activeTheme = currentTheme
-
         val savedDifficulty = prefs.getString(
             "ai_difficulty",
             "Непобедимый"
@@ -265,39 +196,34 @@ fun CheckersScreen(
         viewModel.restartGame()
         whiteSeconds = 600
         blackSeconds = 600
-
-        prefs.edit()
-            .putInt("white_seconds", whiteSeconds)
-            .putInt("black_seconds", blackSeconds)
-            .apply()
     }
 
-    LaunchedEffect(currentPlayer, gameMessage) {
-        while (gameMessage == null) {
-            delay(1000)
+    LaunchedEffect(
+        currentPlayer,
+        gameMessage,
+        whiteSeconds,
+        blackSeconds
+    ) {
+        if (gameMessage != null) return@LaunchedEffect
 
-            if (currentPlayer == PlayerColor.WHITE) {
-                if (whiteSeconds <= 1) {
-                    whiteSeconds = 0
-                    viewModel.onTimeExpired(PlayerColor.WHITE)
-                    break
-                } else {
-                    whiteSeconds -= 1
-                }
+        delay(1000)
+
+        if (gameMessage != null) return@LaunchedEffect
+
+        if (currentPlayer == PlayerColor.WHITE) {
+            if (whiteSeconds <= 1) {
+                whiteSeconds = 0
+                viewModel.onTimeExpired(PlayerColor.WHITE)
             } else {
-                if (blackSeconds <= 1) {
-                    blackSeconds = 0
-                    viewModel.onTimeExpired(PlayerColor.BLACK)
-                    break
-                } else {
-                    blackSeconds -= 1
-                }
+                whiteSeconds -= 1
             }
-
-            prefs.edit()
-                .putInt("white_seconds", whiteSeconds)
-                .putInt("black_seconds", blackSeconds)
-                .apply()
+        } else {
+            if (blackSeconds <= 1) {
+                blackSeconds = 0
+                viewModel.onTimeExpired(PlayerColor.BLACK)
+            } else {
+                blackSeconds -= 1
+            }
         }
     }
 
@@ -342,7 +268,7 @@ fun CheckersScreen(
                         currentPlayer == PlayerColor.WHITE -> "Ваш ход"
                         else -> "Ход противника"
                     },
-                    color = TextColor.copy(alpha = 0.8f),
+                    color = Color(0xFFBDBDBD),
                     fontSize = 12.sp
                 )
             }
@@ -373,30 +299,16 @@ fun CheckersScreen(
                 .shadow(18.dp, RoundedCornerShape(12.dp))
                 .background(
                     Brush.verticalGradient(
-                        when (activeTheme) {
-                            "neon" -> listOf(
-                                Color(0xFF00E5FF),
-                                Color(0xFF102A50),
-                                Color(0xFF080D1D)
-                            )
-
-                            "ruby" -> listOf(
-                                Color(0xFFFF3155),
-                                Color(0xFF601528),
-                                Color(0xFF18080D)
-                            )
-
-                            else -> listOf(
-                                Color(0xFF67472B),
-                                Color(0xFF25170D)
-                            )
-                        }
+                        listOf(
+                            Color(0xFF67472B),
+                            Color(0xFF25170D)
+                        )
                     ),
                     RoundedCornerShape(12.dp)
                 )
                 .border(
                     4.dp,
-                    GoldColor,
+                    Color(0xFF76512E),
                     RoundedCornerShape(12.dp)
                 )
                 .padding(3.dp)
@@ -420,8 +332,8 @@ fun CheckersScreen(
                             val squareBrush = when {
                                 isSelected -> Brush.linearGradient(
                                     listOf(
-                                        GoldColor.copy(alpha = 0.85f),
-                                        GoldColor
+                                        Color(0xFFFFE082),
+                                        Color(0xFFD69B16)
                                     )
                                 )
 
@@ -433,41 +345,17 @@ fun CheckersScreen(
                                 )
 
                                 isDarkCell -> Brush.verticalGradient(
-                                    when (activeTheme) {
-                                        "neon" -> listOf(
-                                            Color(0xFF172E62),
-                                            Color(0xFF090F27)
-                                        )
-
-                                        "ruby" -> listOf(
-                                            Color(0xFF8B1733),
-                                            Color(0xFF350B19)
-                                        )
-
-                                        else -> listOf(
-                                            Color(0xFF593820),
-                                            Color(0xFF321D10)
-                                        )
-                                    }
+                                    listOf(
+                                        Color(0xFF593820),
+                                        Color(0xFF321D10)
+                                    )
                                 )
 
                                 else -> Brush.verticalGradient(
-                                    when (activeTheme) {
-                                        "neon" -> listOf(
-                                            Color(0xFFD8F7FF),
-                                            Color(0xFF7899C8)
-                                        )
-
-                                        "ruby" -> listOf(
-                                            Color(0xFFFFE5EA),
-                                            Color(0xFFD7A4B0)
-                                        )
-
-                                        else -> listOf(
-                                            Color(0xFFF2E5D5),
-                                            Color(0xFFD4BDA2)
-                                        )
-                                    }
+                                    listOf(
+                                        Color(0xFFF2E5D5),
+                                        Color(0xFFD4BDA2)
+                                    )
                                 )
                             }
 
@@ -484,6 +372,10 @@ fun CheckersScreen(
                                             context,
                                             vibrationEnabled
                                         )
+
+                                        if (soundEnabled) {
+                                            playGameSound(true)
+                                        }
 
                                         viewModel.onCellClicked(
                                             cell.position
@@ -522,7 +414,7 @@ fun CheckersScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
-                        color = PanelColor.copy(alpha = 0.95f),
+                        color = Color(0xEE1E1E1E),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
@@ -602,7 +494,7 @@ fun CheckersScreen(
             onDismissRequest = {
                 showSettingsDialog = false
             },
-            containerColor = PanelColor,
+            containerColor = Color(0xFF1E1E1E),
             titleContentColor = GoldColor,
             textContentColor = TextColor,
             title = {
@@ -613,77 +505,9 @@ fun CheckersScreen(
             },
             text = {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 520.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "ТЕМА ОФОРМЛЕНИЯ",
-                        color = GoldColor,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    listOf(
-                        "gold" to "Obsidian Gold",
-                        "neon" to "Cyber Neon",
-                        "ruby" to "Ruby Diamond"
-                    ).forEach { (themeId, themeName) ->
-                        val selectedTheme = currentTheme == themeId
-
-                        val themeAccent = when (themeId) {
-                            "neon" -> Color(0xFF00E5FF)
-                            "ruby" -> Color(0xFFFF3155)
-                            else -> Color(0xFFF4C430)
-                        }
-
-                        val themeButtonColor = when (themeId) {
-                            "neon" -> Color(0xFF12385A)
-                            "ruby" -> Color(0xFF67182C)
-                            else -> Color(0xFF49371B)
-                        }
-
-                        Button(
-                            onClick = {
-                                currentTheme = themeId
-                                activeTheme = themeId
-
-                                prefs.edit()
-                                    .putString("board_theme", themeId)
-                                    .apply()
-
-                                triggerVibration(
-                                    context,
-                                    vibrationEnabled
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = themeButtonColor,
-                                contentColor = Color.White
-                            ),
-                            border = if (selectedTheme) {
-                                androidx.compose.foundation.BorderStroke(
-                                    2.dp,
-                                    themeAccent
-                                )
-                            } else {
-                                null
-                            }
-                        ) {
-                            Text(
-                                text = if (selectedTheme) {
-                                    "✓ $themeName"
-                                } else {
-                                    themeName
-                                },
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = BorderColor)
-
                     Text(
                         text = "Сложность ИИ",
                         color = GoldColor,
@@ -720,12 +544,12 @@ fun CheckersScreen(
                                         containerColor = if (isSelected) {
                                             GoldColor
                                         } else {
-                                            PanelColor
+                                            Color(0xFF303030)
                                         },
                                         contentColor = if (isSelected) {
                                             Color(0xFF141414)
                                         } else {
-                                            TextColor
+                                            Color.White
                                         }
                                     ),
                                     contentPadding = PaddingValues(
@@ -743,7 +567,7 @@ fun CheckersScreen(
                         }
                     }
 
-                    HorizontalDivider(color = BorderColor)
+                    HorizontalDivider(color = Color(0xFF3A3A3A))
 
                     SettingSwitch(
                         title = "Звуки",
@@ -775,7 +599,7 @@ fun CheckersScreen(
 
                     Text(
                         text = "Контроль времени: 10 минут на каждого игрока.",
-                        color = TextColor.copy(alpha = 0.7f),
+                        color = Color(0xFF999999),
                         fontSize = 12.sp
                     )
 
@@ -814,7 +638,7 @@ fun CheckersScreen(
     gameMessage?.let { message ->
         AlertDialog(
             onDismissRequest = {},
-            containerColor = PanelColor,
+            containerColor = Color(0xFF1E1E1E),
             titleContentColor = GoldColor,
             textContentColor = TextColor,
             title = {
@@ -855,7 +679,7 @@ private fun PanelButton(
             .background(PanelColor, RoundedCornerShape(12.dp))
             .border(
                 1.dp,
-                BorderColor,
+                Color(0xFF414141),
                 RoundedCornerShape(12.dp)
             )
             .clickable { onClick() },
@@ -878,65 +702,18 @@ private fun PlayerPanel(
     isActive: Boolean,
     isWhite: Boolean
 ) {
-    val whitePanelBrush = when (activeTheme) {
-        "neon" -> Brush.radialGradient(
-            listOf(
-                Color(0xFFFFFFFF),
-                Color(0xFFB7FFFF),
-                Color(0xFF43C6D5)
-            )
-        )
-        "ruby" -> Brush.radialGradient(
-            listOf(
-                Color.White,
-                Color(0xFFFFDCE3),
-                Color(0xFFDF8B9B)
-            )
-        )
-        else -> Brush.radialGradient(
-            listOf(
-                Color.White,
-                Color(0xFFFFF0C9),
-                Color(0xFFB18A58)
-            )
-        )
-    }
-
-    val blackPanelBrush = when (activeTheme) {
-        "neon" -> Brush.radialGradient(
-            listOf(
-                Color(0xFF00E5FF),
-                Color(0xFF163C62),
-                Color(0xFF030918)
-            )
-        )
-        "ruby" -> Brush.radialGradient(
-            listOf(
-                Color(0xFFFF3155),
-                Color(0xFF67182C),
-                Color(0xFF16040A)
-            )
-        )
-        else -> Brush.radialGradient(
-            listOf(
-                Color(0xFF777777),
-                Color(0xFF262626),
-                Color.Black
-            )
-        )
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isActive) ActivePanelColor
-                else PanelColor.copy(alpha = 0.75f),
+                if (isActive) Color(0xFF29251B)
+                else Color(0xFF1C1C1C),
                 RoundedCornerShape(12.dp)
             )
             .border(
                 width = if (isActive) 1.dp else 0.5.dp,
-                color = if (isActive) GoldColor else BorderColor,
+                color = if (isActive) GoldColor
+                else Color(0xFF333333),
                 shape = RoundedCornerShape(12.dp)
             )
             .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -952,23 +729,44 @@ private fun PlayerPanel(
                     .size(32.dp)
                     .shadow(4.dp, CircleShape)
                     .background(
-                        if (isWhite) whitePanelBrush else blackPanelBrush,
+                        if (isWhite) {
+                            Brush.radialGradient(
+                                listOf(
+                                    Color.White,
+                                    Color(0xFFE2D0B6),
+                                    Color(0xFF8D704C)
+                                )
+                            )
+                        } else {
+                            Brush.radialGradient(
+                                listOf(
+                                    Color(0xFF777777),
+                                    Color(0xFF262626),
+                                    Color.Black
+                                )
+                            )
+                        },
                         CircleShape
                     )
-                    .border(1.dp, GoldColor, CircleShape)
+                    .border(
+                        1.dp,
+                        if (isWhite) Color(0xFFE8D3AD)
+                        else Color(0xFF777777),
+                        CircleShape
+                    )
             )
 
             Column {
                 Text(
                     text = title,
-                    color = if (isActive) GoldColor else TextColor,
+                    color = if (isActive) GoldColor else Color.White,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
                     text = subtitle,
-                    color = TextColor.copy(alpha = 0.65f),
+                    color = Color(0xFF999999),
                     fontSize = 10.sp
                 )
             }
@@ -976,7 +774,7 @@ private fun PlayerPanel(
 
         Text(
             text = clock,
-            color = if (isActive) GoldColor else TextColor,
+            color = if (isActive) GoldColor else Color(0xFFB0B0B0),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -1005,7 +803,7 @@ private fun SettingSwitch(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = GoldColor,
-                checkedTrackColor = ActivePanelColor
+                checkedTrackColor = Color(0xFF78601B)
             )
         )
     }
@@ -1028,7 +826,7 @@ fun BottomIconButton(
                 .background(PanelColor, RoundedCornerShape(15.dp))
                 .border(
                     1.dp,
-                    BorderColor,
+                    Color(0xFF414141),
                     RoundedCornerShape(15.dp)
                 )
                 .clickable { onClick() },
@@ -1044,7 +842,7 @@ fun BottomIconButton(
         if (caption.isNotEmpty()) {
             Text(
                 text = caption,
-                color = TextColor.copy(alpha = 0.65f),
+                color = Color(0xFF999999),
                 fontSize = 9.sp
             )
         }
@@ -1079,14 +877,8 @@ fun AnimatedPieceWrapper(piece: CheckerPiece) {
 }
 
 /**
- * Трёхмерная шашка с цветовыми схемами для всех тем.
- *
- * GOLD: белое золото и чёрный металл.
- * NEON: ледяной голубой и тёмно-синий неон.
- * RUBY: жемчужно-розовый и рубиново-чёрный.
- *
- * Меняются боковая стенка, лицевая поверхность,
- * металлические кольца, блики и корона дамки.
+ * Объёмные шашки: затенённая боковая стенка,
+ * полированная верхняя поверхность и золотая корона.
  */
 @Composable
 fun UltraHD3DPieceView(
@@ -1094,136 +886,6 @@ fun UltraHD3DPieceView(
     scale: Float = 1f
 ) {
     val isWhite = piece.color == PlayerColor.WHITE
-
-    val whiteSideColors = when (activeTheme) {
-        "neon" -> listOf(
-            Color(0xFFDAFFFF),
-            Color(0xFF65DDEB),
-            Color(0xFF2588A5),
-            Color(0xFF12425D)
-        )
-        "ruby" -> listOf(
-            Color(0xFFFFE8ED),
-            Color(0xFFEFADBC),
-            Color(0xFFBA647D),
-            Color(0xFF743448)
-        )
-        else -> listOf(
-            Color(0xFFEAD8B9),
-            Color(0xFFB18A58),
-            Color(0xFF79542E),
-            Color(0xFF4D341D)
-        )
-    }
-
-    val blackSideColors = when (activeTheme) {
-        "neon" -> listOf(
-            Color(0xFF39F4FF),
-            Color(0xFF164D7B),
-            Color(0xFF092644),
-            Color(0xFF020713)
-        )
-        "ruby" -> listOf(
-            Color(0xFFFF3155),
-            Color(0xFF9A1838),
-            Color(0xFF4C0D20),
-            Color(0xFF16040A)
-        )
-        else -> listOf(
-            Color(0xFF777777),
-            Color(0xFF393939),
-            Color(0xFF151515),
-            Color(0xFF030303)
-        )
-    }
-
-    val whiteFaceColors = when (activeTheme) {
-        "neon" -> listOf(
-            Color.White,
-            Color(0xFFD8FFFF),
-            Color(0xFF8CEEFF),
-            Color(0xFF368FAF)
-        )
-        "ruby" -> listOf(
-            Color.White,
-            Color(0xFFFFE7ED),
-            Color(0xFFF1B5C4),
-            Color(0xFFBF7188)
-        )
-        else -> listOf(
-            Color.White,
-            Color(0xFFFFF4DF),
-            Color(0xFFE5CDA7),
-            Color(0xFFB18B59)
-        )
-    }
-
-    val blackFaceColors = when (activeTheme) {
-        "neon" -> listOf(
-            Color(0xFF6CFFFF),
-            Color(0xFF245D8D),
-            Color(0xFF102B50),
-            Color(0xFF020916)
-        )
-        "ruby" -> listOf(
-            Color(0xFFFF718A),
-            Color(0xFF8F2440),
-            Color(0xFF42101F),
-            Color(0xFF080205)
-        )
-        else -> listOf(
-            Color(0xFF858585),
-            Color(0xFF4A4A4A),
-            Color(0xFF242424),
-            Color(0xFF080808)
-        )
-    }
-
-    val whiteRimColors = when (activeTheme) {
-        "neon" -> listOf(
-            Color.White,
-            Color(0xFF00E5FF),
-            Color(0xFF65CFE8)
-        )
-        "ruby" -> listOf(
-            Color.White,
-            Color(0xFFFF3155),
-            Color(0xFFDA8399)
-        )
-        else -> listOf(
-            Color(0xFFFFF8E9),
-            Color(0xFFB99A6D),
-            Color(0xFFFFF1D2)
-        )
-    }
-
-    val blackRimColors = when (activeTheme) {
-        "neon" -> listOf(
-            Color(0xFF80FFFF),
-            Color(0xFF00A9D4),
-            Color(0xFF164A76)
-        )
-        "ruby" -> listOf(
-            Color(0xFFFF879B),
-            Color(0xFFE12248),
-            Color(0xFF71162E)
-        )
-        else -> listOf(
-            Color(0xFFAAAAAA),
-            Color(0xFF444444),
-            Color(0xFF777777)
-        )
-    }
-
-    val pieceAccent = when (activeTheme) {
-        "neon" -> Color(0xFF00E5FF)
-        "ruby" -> Color(0xFFFF3155)
-        else -> Color(0xFFFFD166)
-    }
-
-    val sideColors = if (isWhite) whiteSideColors else blackSideColors
-    val faceColors = if (isWhite) whiteFaceColors else blackFaceColors
-    val rimColors = if (isWhite) whiteRimColors else blackRimColors
 
     Box(
         modifier = Modifier.fillMaxSize(
@@ -1238,12 +900,12 @@ fun UltraHD3DPieceView(
                 size.height / 2f
             )
 
-            // Тень
+            // Мягкая тень под фишкой
             drawOval(
                 color = Color.Black.copy(alpha = 0.52f),
                 topLeft = Offset(
                     center.x - radius * 0.91f,
-                    center.y - radius * 0.02f
+                    center.y - radius * 0.22f
                 ),
                 size = Size(
                     radius * 1.82f,
@@ -1251,13 +913,33 @@ fun UltraHD3DPieceView(
                 )
             )
 
-            // Боковая стенка с оттенками текущей темы
-            drawOval(
-                brush = Brush.verticalGradient(
-                    colors = sideColors,
+            // Толстая боковая стенка
+            val sideBrush = if (isWhite) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFEAD8B9),
+                        Color(0xFFB18A58),
+                        Color(0xFF79542E),
+                        Color(0xFF4D341D)
+                    ),
                     startY = center.y - radius * 0.1f,
                     endY = center.y + radius * 0.62f
-                ),
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF777777),
+                        Color(0xFF393939),
+                        Color(0xFF151515),
+                        Color(0xFF030303)
+                    ),
+                    startY = center.y - radius * 0.1f,
+                    endY = center.y + radius * 0.62f
+                )
+            }
+
+            drawOval(
+                brush = sideBrush,
                 topLeft = Offset(
                     center.x - radius * 0.94f,
                     center.y - radius * 0.02f
@@ -1268,12 +950,22 @@ fun UltraHD3DPieceView(
                 )
             )
 
-            // Металлический нижний ободок
+            // Нижний металлический кант
             drawCircle(
                 brush = Brush.verticalGradient(
-                    colors = rimColors,
-                    startY = center.y - radius,
-                    endY = center.y + radius
+                    colors = if (isWhite) {
+                        listOf(
+                            Color(0xFFFFF1D7),
+                            Color(0xFFC9A878),
+                            Color(0xFF8C6538)
+                        )
+                    } else {
+                        listOf(
+                            Color(0xFF969696),
+                            Color(0xFF454545),
+                            Color(0xFF101010)
+                        )
+                    }
                 ),
                 radius = radius * 0.98f,
                 center = center - Offset(
@@ -1282,29 +974,65 @@ fun UltraHD3DPieceView(
                 )
             )
 
+            // Верхняя поверхность приподнята над боковой стенкой
             val faceCenter = center - Offset(
                 0f,
                 radius * 0.20f
             )
 
-            // Верхняя поверхность
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = faceColors,
+            val faceBrush = if (isWhite) {
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFFFFF),
+                        Color(0xFFFFF4DF),
+                        Color(0xFFE5CDA7),
+                        Color(0xFFB18B59)
+                    ),
                     center = faceCenter - Offset(
                         radius * 0.32f,
                         radius * 0.40f
                     ),
                     radius = radius * 1.65f
-                ),
+                )
+            } else {
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF858585),
+                        Color(0xFF4A4A4A),
+                        Color(0xFF242424),
+                        Color(0xFF080808),
+                        Color(0xFF000000)
+                    ),
+                    center = faceCenter - Offset(
+                        radius * 0.32f,
+                        radius * 0.40f
+                    ),
+                    radius = radius * 1.65f
+                )
+            }
+
+            drawCircle(
+                brush = faceBrush,
                 radius = radius * 0.94f,
                 center = faceCenter
             )
 
-            // Внешний металлический кант
+            // Полированный внешний ободок
             drawCircle(
                 brush = Brush.linearGradient(
-                    colors = rimColors,
+                    colors = if (isWhite) {
+                        listOf(
+                            Color(0xFFFFF8E9),
+                            Color(0xFFB99A6D),
+                            Color(0xFFFFF1D2)
+                        )
+                    } else {
+                        listOf(
+                            Color(0xFFAAAAAA),
+                            Color(0xFF444444),
+                            Color(0xFF777777)
+                        )
+                    },
                     start = Offset(
                         faceCenter.x - radius,
                         faceCenter.y - radius
@@ -1319,17 +1047,7 @@ fun UltraHD3DPieceView(
                 style = Stroke(width = radius * 0.075f)
             )
 
-            // Световой ободок
-            drawCircle(
-                color = pieceAccent.copy(
-                    alpha = if (isWhite) 0.58f else 0.75f
-                ),
-                radius = radius * 0.79f,
-                center = faceCenter,
-                style = Stroke(width = radius * 0.025f)
-            )
-
-            // Отражение на поверхности
+            // Световой блик
             drawCircle(
                 color = Color.White.copy(
                     alpha = if (isWhite) 0.72f else 0.34f
@@ -1342,22 +1060,33 @@ fun UltraHD3DPieceView(
                 style = Stroke(width = radius * 0.035f)
             )
 
-            // Внутреннее кольцо
+            // Внутренние кольца
             drawCircle(
                 color = if (isWhite) {
-                    pieceAccent.copy(alpha = 0.72f)
+                    Color(0xFFC6A579)
                 } else {
-                    pieceAccent.copy(alpha = 0.95f)
+                    Color(0xFF111111)
                 },
                 radius = radius * 0.57f,
                 center = faceCenter,
                 style = Stroke(width = radius * 0.075f)
             )
 
-            // Центральная поверхность
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = faceColors,
+                    colors = if (isWhite) {
+                        listOf(
+                            Color(0xFFFFFFFF),
+                            Color(0xFFE5D1AD),
+                            Color(0xFFB99A6C)
+                        )
+                    } else {
+                        listOf(
+                            Color(0xFF505050),
+                            Color(0xFF202020),
+                            Color(0xFF080808)
+                        )
+                    },
                     center = faceCenter - Offset(
                         radius * 0.15f,
                         radius * 0.18f
@@ -1368,7 +1097,7 @@ fun UltraHD3DPieceView(
                 center = faceCenter
             )
 
-            // Блик
+            // Отражение света на поверхности
             drawOval(
                 color = Color.White.copy(
                     alpha = if (isWhite) 0.48f else 0.19f
@@ -1383,17 +1112,6 @@ fun UltraHD3DPieceView(
                 )
             )
 
-            // Дополнительный цветной блик для неоновой темы
-            if (activeTheme == "neon") {
-                drawCircle(
-                    color = pieceAccent.copy(alpha = 0.7f),
-                    radius = radius * 0.92f,
-                    center = faceCenter,
-                    style = Stroke(width = radius * 0.025f)
-                )
-            }
-
-            // Корона дамки
             if (piece.type == PieceType.KING) {
                 val crownCenter = faceCenter - Offset(
                     0f,
@@ -1402,27 +1120,6 @@ fun UltraHD3DPieceView(
 
                 val crownWidth = radius * 0.95f
                 val crownHeight = radius * 0.65f
-
-                val crownColors = when (activeTheme) {
-                    "neon" -> listOf(
-                        Color.White,
-                        Color(0xFF00F5FF),
-                        Color(0xFF0077FF),
-                        Color(0xFF06365E)
-                    )
-                    "ruby" -> listOf(
-                        Color(0xFFFFF0F3),
-                        Color(0xFFFF3155),
-                        Color(0xFFB70F38),
-                        Color(0xFF58091E)
-                    )
-                    else -> listOf(
-                        Color(0xFFFFFFE0),
-                        Color(0xFFFFD54F),
-                        Color(0xFFD49A18),
-                        Color(0xFF80520A)
-                    )
-                }
 
                 val crownPath = Path().apply {
                     moveTo(
@@ -1462,11 +1159,16 @@ fun UltraHD3DPieceView(
                     color = Color.Black.copy(alpha = 0.65f)
                 )
 
-                // Цветная металлическая корона
+                // Золотая поверхность короны
                 drawPath(
                     path = crownPath,
                     brush = Brush.verticalGradient(
-                        colors = crownColors,
+                        colors = listOf(
+                            Color(0xFFFFFFE0),
+                            Color(0xFFFFD54F),
+                            Color(0xFFD49A18),
+                            Color(0xFF80520A)
+                        ),
                         startY = crownCenter.y - crownHeight,
                         endY = crownCenter.y + crownHeight
                     )
@@ -1474,11 +1176,11 @@ fun UltraHD3DPieceView(
 
                 drawPath(
                     path = crownPath,
-                    color = pieceAccent,
+                    color = Color(0xFF70450B),
                     style = Stroke(width = radius * 0.045f)
                 )
 
-                // Три сияющих камня
+                // Три сияющих камня на короне
                 listOf(
                     crownCenter.x - crownWidth * 0.42f,
                     crownCenter.x,
@@ -1488,8 +1190,8 @@ fun UltraHD3DPieceView(
                         crownCenter.y - crownHeight * 0.22f
 
                     drawCircle(
-                        color = pieceAccent.copy(alpha = 0.7f),
-                        radius = radius * 0.09f,
+                        color = Color(0xFF8D5E00),
+                        radius = radius * 0.075f,
                         center = Offset(
                             jewelX,
                             jewelY + radius * 0.025f
@@ -1500,20 +1202,7 @@ fun UltraHD3DPieceView(
                         brush = Brush.radialGradient(
                             colors = listOf(
                                 Color.White,
-                                pieceAccent,
-                                crownColors.last()
+                                Color(0xFFFFF1A8),
+                                Color(0xFFD99A10)
                             ),
-                            center = Offset(
-                                jewelX - radius * 0.02f,
-                                jewelY - radius * 0.02f
-                            ),
-                            radius = radius * 0.12f
-                        ),
-                        radius = radius * 0.055f,
-                        center = Offset(jewelX, jewelY)
-                    )
-                }
-            }
-        }
-    }
-}
+            
